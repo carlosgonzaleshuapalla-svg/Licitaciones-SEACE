@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { listarTenders, obtenerTenderDetalle, obtenerMeta } from '../tendersRepo.js';
 import { runSync } from '../syncService.js';
+import { syncLimiter } from '../security.js';
 
 export const apiRouter = Router();
 
@@ -38,7 +39,7 @@ apiRouter.get('/tenders/:id', (req, res) => {
   res.json(detalle);
 });
 
-apiRouter.post('/sync', async (req, res) => {
+apiRouter.post('/sync', syncLimiter, async (req, res) => {
   const resultado = await runSync({ log: console.log });
   res.json(resultado);
 });

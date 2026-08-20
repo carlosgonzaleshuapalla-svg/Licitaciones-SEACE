@@ -85,6 +85,14 @@ async function fetchTodosLosRegistros(log) {
 }
 
 let syncEnCurso = false;
+let ultimaSyncIniciadaEn = 0;
+
+// Cooldown global (no por IP): protege tanto a este servidor como a la API
+// de SEACE de que muchas requests de sync manual, aunque vengan de IPs
+// distintas (esquivando el rate limit por IP de la ruta), terminen
+// machacando ambos servicios. El sync programado corre cada 20 min, muy
+// por encima de este cooldown, así que nunca choca con él.
+const SYNC_COOLDOWN_MS = 90 * 1000;
 
 /**
  * Corre una sincronización completa: pagina el buscador, guarda cabeceras,
@@ -97,7 +105,14 @@ export async function runSync({ log = console.log } = {}) {
     return { ok: false, sincronizados: 0, timestamp: new Date().toISOString(), motivo: 'ya-en-curso' };
   }
 
+  const desdeUltima = Date.now() - ultimaSyncIniciadaEn;
+  if (desdeUltima < SYNC_COOLDOWN_MS) {
+    log(`Sincronización pedida demasiado pronto (hace ${Math.round(desdeUltima / 1000)}s). Se omite.`);
+    return { ok: false, sincronizados: 0, timestamp: new Date().toISOString(), motivo: 'cooldown' };
+  }
+
   syncEnCurso = true;
+  ultimaSyncIniciadaEn = Date.now();
   const inicio = Date.now();
   let sincronizados = 0;
 

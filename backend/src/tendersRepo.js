@@ -102,8 +102,10 @@ export function listarTenders({
     .get(params);
   const total = totalRow.total;
 
+  // pageSize sin techo dejaría pedir el total de filas de una sola vez
+  // (memoria/ancho de banda como vector de abuso) — se limita a 100.
   const pageSafe = Math.max(1, Number(page) || 1);
-  const pageSizeSafe = Math.max(1, Number(pageSize) || 20);
+  const pageSizeSafe = Math.min(100, Math.max(1, Number(pageSize) || 20));
   const offset = (pageSafe - 1) * pageSizeSafe;
 
   const rows = db

@@ -35,6 +35,55 @@
   .app-main {
     grid-template-columns: 1fr;
   }
+
+  /* En desktop el panel de detalle es una barra lateral sticky. En mobile
+     no hay "al lado" donde ponerlo, y antes quedaba apilado debajo de toda
+     la lista (había que hacer scroll larguísimo para verlo, prácticamente
+     invisible). Acá pasa a ser una hoja a pantalla completa que se desliza
+     encima de todo solo cuando hay algo seleccionado. */
+  .detalle-panel {
+    position: fixed;
+    inset: 0;
+    top: auto;
+    max-height: 92vh;
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.22s ease;
+    z-index: 40;
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.18);
+  }
+
+  .detalle-panel-abierto {
+    transform: translateY(0);
+  }
+
+  .detalle-panel.detalle-vacio {
+    display: none;
+  }
+
+  .detalle-backdrop {
+    display: none;
+  }
+
+  .detalle-backdrop.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 25, 0.4);
+    z-index: 39;
+  }
+}
+
+@media (min-width: 961px) {
+  .detalle-backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detalle-panel {
+    transition: none;
+  }
 }
 
 .panel-lista {
@@ -416,6 +465,20 @@
 .etapas-list li span {
   color: var(--color-text-muted);
   white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  /* A este ancho, la etiqueta ("ETAPA DE...") y la fecha en una sola fila
+     no entran y el texto se corta contra el borde del panel. Se apilan. */
+  .etapas-list li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .etapas-list li span {
+    white-space: normal;
+  }
 }
 
 .items-list {
