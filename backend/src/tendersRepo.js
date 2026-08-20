@@ -9,6 +9,15 @@ function ciudadesDe(idContrato) {
   return getCiudadesStmt.all(idContrato).map((r) => r.departamento);
 }
 
+/**
+ * fecha_publicacion se guarda tal como la entrega SEACE: texto
+ * "DD/MM/YYYY HH:mm:ss" (no ISO). Ordenar ese texto directamente compara
+ * alfabéticamente, no cronológicamente ("19/08/2026" queda antes que
+ * "31/12/2025" porque "1" < "3"). Este fragmento SQL reordena los mismos
+ * caracteres a "YYYYMMDD HH:mm:ss" para que el ORDER BY sí sea cronológico.
+ */
+const FECHA_PUBLICACION_ORDENABLE = `(substr(t.fecha_publicacion, 7, 4) || substr(t.fecha_publicacion, 4, 2) || substr(t.fecha_publicacion, 1, 2) || substr(t.fecha_publicacion, 12, 8))`;
+
 function rowToSummary(row) {
   return {
     idContrato: row.id_contrato,
@@ -70,7 +79,7 @@ export function listarTenders({ departamento, estado, q, soloBienes, page = 1, p
   const rows = db
     .prepare(
       `SELECT DISTINCT t.* ${baseFrom} ${where}
-       ORDER BY t.fecha_publicacion DESC, t.id_contrato DESC
+       ORDER BY ${FECHA_PUBLICACION_ORDENABLE} DESC, t.id_contrato DESC
        LIMIT @limit OFFSET @offset`
     )
     .all({ ...params, limit: pageSizeSafe, offset });
