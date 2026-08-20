@@ -10,13 +10,26 @@ function ciudadesDe(idContrato) {
 }
 
 /**
- * fecha_publicacion se guarda tal como la entrega SEACE: texto
- * "DD/MM/YYYY HH:mm:ss" (no ISO). Ordenar ese texto directamente compara
- * alfabéticamente, no cronológicamente ("19/08/2026" queda antes que
- * "31/12/2025" porque "1" < "3"). Este fragmento SQL reordena los mismos
- * caracteres a "YYYYMMDD HH:mm:ss" para que el ORDER BY sí sea cronológico.
+ * Las fechas se guardan tal como las entrega SEACE: texto "DD/MM/YYYY
+ * HH:mm:ss" (no ISO). Compararlas como texto es alfabético, no cronológico
+ * ("19/08/2026" queda antes que "31/12/2025" porque "1" < "3"). Esta
+ * función arma la misma columna reordenada a "YYYYMMDDHH:mm:ss", que sí
+ * compara (y ordena) cronológicamente. Se usa tanto para ORDER BY como
+ * para el filtro de "ya venció".
  */
-const FECHA_PUBLICACION_ORDENABLE = `(substr(t.fecha_publicacion, 7, 4) || substr(t.fecha_publicacion, 4, 2) || substr(t.fecha_publicacion, 1, 2) || substr(t.fecha_publicacion, 12, 8))`;
+function fechaOrdenable(columnaSql) {
+  return `(substr(${columnaSql}, 7, 4) || substr(${columnaSql}, 4, 2) || substr(${columnaSql}, 1, 2) || substr(${columnaSql}, 12, 8))`;
+}
+
+const FECHA_PUBLICACION_ORDENABLE = fechaOrdenable('t.fecha_publicacion');
+const COTIZACION_FIN_ORDENABLE = fechaOrdenable('t.cotizacion_fin');
+
+/** "ahora" en el mismo formato "YYYYMMDDHH:mm:ss" que fechaOrdenable(). */
+function ahoraOrdenable() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
 
 function rowToSummary(row) {
   return {
@@ -42,8 +55,21 @@ function rowToSummary(row) {
  * q: substring case-insensitive sobre descripcion o entidad.
  * soloBienes: si es true, solo objeto = 'Bien' (por ahora siempre es el caso,
  * pero se deja como filtro explícito y honesto en vez de asumirlo).
+ * ocultarVencidas: si es true, esconde contratos cuya cotizacion_fin ya
+ * pasó — SEACE a veces los sigue marcando "Vigente" aunque el plazo real
+ * de cotización ya cerró (dato de la fuente, no lo controlamos), así que
+ * este filtro es la única forma honesta de mostrar solo lo que de verdad
+ * se puede cotizar todavía.
  */
-export function listarTenders({ departamento, estado, q, soloBienes, page = 1, pageSize = 20 }) {
+export function listarTenders({
+  departamento,
+  estado,
+  q,
+  soloBienes,
+  ocultarVencidas,
+  page = 1,
+  pageSize = 20,
+}) {
   const condiciones = [];
   const params = {};
 
@@ -63,6 +89,10 @@ export function listarTenders({ departamento, estado, q, soloBienes, page = 1, p
   }
   if (soloBienes) {
     condiciones.push("t.objeto = 'Bien'");
+  }
+  if (ocultarVencidas) {
+    condiciones.push(`(t.cotizacion_fin IS NULL OR ${COTIZACION_FIN_ORDENABLE} >= @ahora)`);
+    params.ahora = ahoraOrdenable();
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';

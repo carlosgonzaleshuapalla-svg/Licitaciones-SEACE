@@ -1,5 +1,6 @@
 import type { TenderDetail } from "../types/api";
 import { formatearFecha } from "../lib/fechas";
+import { urlOficialSeace } from "../lib/seaceLinks";
 import { CalculadoraMargen } from "./CalculadoraMargen";
 
 interface TenderDetailPanelProps {
@@ -55,7 +56,20 @@ export function TenderDetailPanel({
 
       <header className="detalle-header">
         <span className="tender-codigo">{detalle.codigo}</span>
-        <h2>{detalle.entidad}</h2>
+        <h2>
+          <a
+            href={urlOficialSeace(detalle.idContrato)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tender-entidad-link"
+            title="Ver esta licitación en el portal oficial de SEACE"
+          >
+            {detalle.entidad}
+            <span className="link-externo" aria-hidden="true">
+              ↗
+            </span>
+          </a>
+        </h2>
         <p>{detalle.descripcion}</p>
       </header>
 

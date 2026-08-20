@@ -87,7 +87,30 @@ describe("TenderList", () => {
       />,
     );
 
-    await user.click(screen.getByText("Municipalidad de Lima"));
+    // El nombre de la entidad ahora es un link al portal oficial de SEACE
+    // (abre en pestaña nueva), no dispara la selección — se clickea la
+    // descripción, que sigue dentro de la zona clickeable de la tarjeta.
+    await user.click(screen.getByText(/adquisición de laptops/i));
     expect(onSeleccionar).toHaveBeenCalledWith(1);
+  });
+
+  it("el nombre de la entidad enlaza al detalle oficial de esa licitación en SEACE", () => {
+    render(
+      <TenderList
+        tenders={tendersMock}
+        cargando={false}
+        error={null}
+        seleccionadoId={null}
+        onSeleccionar={() => {}}
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: /Municipalidad de Lima/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://prod6.seace.gob.pe/buscador-publico/contrataciones/1",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
 });

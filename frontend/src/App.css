@@ -140,7 +140,7 @@
   all: unset;
   display: block;
   width: 100%;
-  padding: 14px 16px;
+  padding: 4px 16px 14px;
   text-align: left;
 }
 
@@ -154,6 +154,7 @@
   gap: 8px;
   margin-bottom: 6px;
   flex-wrap: wrap;
+  padding: 14px 16px 0;
 }
 
 .tender-codigo {
@@ -187,6 +188,26 @@
 .tender-entidad {
   font-size: 15px;
   margin-bottom: 4px;
+  padding: 0 16px;
+}
+
+.tender-entidad-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--color-text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tender-entidad-link:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.tender-entidad-link .link-externo {
+  font-size: 12px;
+  color: var(--color-text-muted);
 }
 
 .tender-descripcion {

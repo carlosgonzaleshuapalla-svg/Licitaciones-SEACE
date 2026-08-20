@@ -5,6 +5,7 @@ export interface FiltrosState {
   estado: string;
   q: string;
   soloBienes: boolean;
+  ocultarVencidas: boolean;
 }
 
 interface FiltrosProps {
@@ -93,6 +94,25 @@ export function Filtros({
           Servicio/Obra/Consultoría. SEACE no publica un plazo de entrega
           estructurado, así que no podemos mostrarte "rapidez de entrega" —
           solo el tipo de contratación.
+        </p>
+      </div>
+
+      <div className="campo-checkbox">
+        <label>
+          <input
+            type="checkbox"
+            checked={filtros.ocultarVencidas}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              actualizar({ ocultarVencidas: e.target.checked })
+            }
+          />
+          Ocultar las que ya vencieron su fecha de cotización
+        </label>
+        <p className="ayuda">
+          SEACE a veces sigue marcando "Vigente" contratos cuya fecha límite
+          de cotización ya pasó (no lo controlamos, es un dato de su propio
+          sistema). Con esto activado, filtramos por la fecha real en vez de
+          confiar solo en la etiqueta de estado.
         </p>
       </div>
     </div>

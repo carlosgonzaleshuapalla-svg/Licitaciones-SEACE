@@ -65,6 +65,7 @@ export interface TendersQuery {
   estado?: string;
   q?: string;
   soloBienes?: boolean;
+  ocultarVencidas?: boolean;
   page?: number;
   pageSize?: number;
 }

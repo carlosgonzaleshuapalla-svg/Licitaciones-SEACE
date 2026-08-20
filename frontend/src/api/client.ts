@@ -55,6 +55,8 @@ function buildQueryString(query: TendersQuery): string {
   if (query.q) params.set("q", query.q);
   if (query.soloBienes !== undefined)
     params.set("soloBienes", String(query.soloBienes));
+  if (query.ocultarVencidas !== undefined)
+    params.set("ocultarVencidas", String(query.ocultarVencidas));
   if (query.page !== undefined) params.set("page", String(query.page));
   if (query.pageSize !== undefined)
     params.set("pageSize", String(query.pageSize));

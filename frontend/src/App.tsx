@@ -19,6 +19,7 @@ function App() {
     estado: "Vigente",
     q: "",
     soloBienes: true,
+    ocultarVencidas: true,
   });
   const [qDebounced, setQDebounced] = useState("");
 
@@ -55,7 +56,13 @@ function App() {
   // Volver a página 1 cuando cambian los filtros.
   useEffect(() => {
     setPage(1);
-  }, [filtros.departamento, filtros.estado, filtros.soloBienes, qDebounced]);
+  }, [
+    filtros.departamento,
+    filtros.estado,
+    filtros.soloBienes,
+    filtros.ocultarVencidas,
+    qDebounced,
+  ]);
 
   // Cargar lista de licitaciones.
   useEffect(() => {
@@ -68,6 +75,7 @@ function App() {
       estado: filtros.estado || undefined,
       q: qDebounced || undefined,
       soloBienes: filtros.soloBienes,
+      ocultarVencidas: filtros.ocultarVencidas,
       page,
       pageSize: PAGE_SIZE,
     })
@@ -95,6 +103,7 @@ function App() {
     filtros.departamento,
     filtros.estado,
     filtros.soloBienes,
+    filtros.ocultarVencidas,
     qDebounced,
     page,
     refrescar,
