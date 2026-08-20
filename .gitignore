@@ -1,0 +1,8 @@
+node_modules/
+backend/data/
+backend/public/
+frontend/dist/
+snapshot/data.json
+snapshot/artifact.html
+.DS_Store
+*.log

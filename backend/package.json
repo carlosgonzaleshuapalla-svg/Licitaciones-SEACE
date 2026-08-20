@@ -1,0 +1,20 @@
+{
+  "name": "seace-licitaciones-backend",
+  "version": "1.0.0",
+  "description": "Backend (API + ETL) para el portal de licitaciones SEACE",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "SEACE_DB_PATH=:memory: node --test",
+    "build": "npm install --prefix ../frontend && npm run build --prefix ../frontend && rm -rf public && cp -r ../frontend/dist public"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
