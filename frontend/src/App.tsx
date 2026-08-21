@@ -18,7 +18,7 @@ function App() {
     departamento: "",
     estado: "Vigente",
     q: "",
-    soloBienes: true,
+    objeto: "Bien",
     ocultarVencidas: true,
   });
   const [qDebounced, setQDebounced] = useState("");
@@ -59,7 +59,7 @@ function App() {
   }, [
     filtros.departamento,
     filtros.estado,
-    filtros.soloBienes,
+    filtros.objeto,
     filtros.ocultarVencidas,
     qDebounced,
   ]);
@@ -74,7 +74,7 @@ function App() {
       departamento: filtros.departamento || undefined,
       estado: filtros.estado || undefined,
       q: qDebounced || undefined,
-      soloBienes: filtros.soloBienes,
+      objeto: filtros.objeto || undefined,
       ocultarVencidas: filtros.ocultarVencidas,
       page,
       pageSize: PAGE_SIZE,
@@ -102,7 +102,7 @@ function App() {
   }, [
     filtros.departamento,
     filtros.estado,
-    filtros.soloBienes,
+    filtros.objeto,
     filtros.ocultarVencidas,
     qDebounced,
     page,
@@ -147,8 +147,7 @@ function App() {
         <div>
           <h1>Licitaciones SEACE</h1>
           <p className="app-subtitulo">
-            Contrataciones vigentes de bienes del Estado peruano, listas para
-            cotizar
+            Contrataciones vigentes del Estado peruano, listas para cotizar
           </p>
         </div>
         <SyncButton onSincronizado={() => setRefrescar((r) => r + 1)} />

@@ -14,12 +14,12 @@ apiRouter.get('/meta', (req, res) => {
 });
 
 apiRouter.get('/tenders', (req, res) => {
-  const { departamento, estado, q, soloBienes, ocultarVencidas, page, pageSize } = req.query;
+  const { departamento, estado, q, objeto, ocultarVencidas, page, pageSize } = req.query;
   const resultado = listarTenders({
     departamento: departamento || undefined,
     estado: estado || undefined,
     q: q || undefined,
-    soloBienes: soloBienes === 'true' || soloBienes === '1',
+    objeto: objeto || undefined,
     ocultarVencidas: ocultarVencidas === 'true' || ocultarVencidas === '1',
     page: page ? Number(page) : 1,
     pageSize: pageSize ? Number(pageSize) : 20,

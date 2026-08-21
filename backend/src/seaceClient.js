@@ -48,14 +48,17 @@ async function fetchJsonConReintento(url, { retries = MAX_RETRIES } = {}) {
 }
 
 const ANIO_FIJO = 2024; // la SPA oficial usa este valor fijo, no filtra por año real
-const CODIGO_OBJETO_BIEN = 1;
+// 1=Bien, 2=Servicio, 3=Obra, 4=Consultoría de Obra (catálogo de SEACE).
+// Se sincronizan Bien y Servicio — Obra/Consultoría quedan fuera del
+// alcance del portal (no son del tipo "puedo cotizar/comprar rápido").
+const CODIGOS_OBJETO_SINCRONIZADOS = [1, 2];
 const ESTADO_VIGENTE = 2;
 
-/** Trae una página del buscador de contrataciones (Bien + Vigente). */
+/** Trae una página del buscador de contrataciones (Bien+Servicio, Vigente). */
 export async function buscarPagina({ page, pageSize }) {
   const url =
     `${BASE_URL}/buscador?anio=${ANIO_FIJO}&palabra_clave=&orden=2` +
-    `&lista_codigo_objeto=${CODIGO_OBJETO_BIEN}&lista_estado_contrato=${ESTADO_VIGENTE}` +
+    `&lista_codigo_objeto=${CODIGOS_OBJETO_SINCRONIZADOS.join(',')}&lista_estado_contrato=${ESTADO_VIGENTE}` +
     `&page=${page}&page_size=${pageSize}`;
   return fetchJsonConReintento(url);
 }
@@ -66,4 +69,4 @@ export async function listarCompleto(idContrato) {
   return fetchJsonConReintento(url);
 }
 
-export const seaceConfig = { BASE_URL, ANIO_FIJO, CODIGO_OBJETO_BIEN, ESTADO_VIGENTE };
+export const seaceConfig = { BASE_URL, ANIO_FIJO, CODIGOS_OBJETO_SINCRONIZADOS, ESTADO_VIGENTE };

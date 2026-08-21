@@ -1,10 +1,13 @@
 import type { ChangeEvent } from "react";
+import type { ObjetoContrato } from "../types/api";
 
 export interface FiltrosState {
   departamento: string;
   estado: string;
   q: string;
-  soloBienes: boolean;
+  // "" = Bien y Servicio juntos (el portal no sincroniza Obra ni
+  // Consultoría de Obra, así que estas son las únicas opciones reales).
+  objeto: ObjetoContrato | "";
   ocultarVencidas: boolean;
 }
 
@@ -47,6 +50,23 @@ export function Filtros({
         </div>
 
         <div className="campo">
+          <label htmlFor="f-objeto">Tipo de contratación</label>
+          <select
+            id="f-objeto"
+            value={filtros.objeto}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              actualizar({
+                objeto: e.target.value as FiltrosState["objeto"],
+              })
+            }
+          >
+            <option value="">Bien y Servicio</option>
+            <option value="Bien">Solo Bien (producto físico)</option>
+            <option value="Servicio">Solo Servicio</option>
+          </select>
+        </div>
+
+        <div className="campo">
           <label htmlFor="f-estado">Estado</label>
           <select
             id="f-estado"
@@ -77,25 +97,13 @@ export function Filtros({
         </div>
       </div>
 
-      <div className="campo-checkbox">
-        <label>
-          <input
-            type="checkbox"
-            checked={filtros.soloBienes}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              actualizar({ soloBienes: e.target.checked })
-            }
-          />
-          Solo productos que se pueden comprar y entregar (Bienes)
-        </label>
-        <p className="ayuda">
-          Este es el criterio real disponible en la fuente oficial: contratos
-          clasificados como "Bien" (compra de producto físico) frente a
-          Servicio/Obra/Consultoría. SEACE no publica un plazo de entrega
-          estructurado, así que no podemos mostrarte "rapidez de entrega" —
-          solo el tipo de contratación.
-        </p>
-      </div>
+      <p className="ayuda ayuda-objeto">
+        "Bien" es compra de producto físico; "Servicio" es contratación de
+        una persona o empresa para realizar un trabajo. SEACE no publica un
+        plazo de entrega estructurado para ninguno de los dos, así que no
+        podemos mostrarte "rapidez de entrega" — solo el tipo de
+        contratación tal como lo clasifica la fuente.
+      </p>
 
       <div className="campo-checkbox">
         <label>

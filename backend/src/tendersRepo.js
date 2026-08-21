@@ -53,19 +53,22 @@ function rowToSummary(row) {
  * departamento: exact-match contra tender_departamentos.
  * estado: exact-match contra tenders.estado.
  * q: substring case-insensitive sobre descripcion o entidad.
- * soloBienes: si es true, solo objeto = 'Bien' (por ahora siempre es el caso,
- * pero se deja como filtro explícito y honesto en vez de asumirlo).
+ * objeto: exact-match contra tenders.objeto ('Bien' o 'Servicio'; el
+ * portal sincroniza solo esos dos tipos — Obra y Consultoría de Obra
+ * quedan fuera de alcance). Sin valor, no filtra por tipo (trae ambos).
  * ocultarVencidas: si es true, esconde contratos cuya cotizacion_fin ya
  * pasó — SEACE a veces los sigue marcando "Vigente" aunque el plazo real
  * de cotización ya cerró (dato de la fuente, no lo controlamos), así que
  * este filtro es la única forma honesta de mostrar solo lo que de verdad
  * se puede cotizar todavía.
  */
+const OBJETOS_VALIDOS = new Set(['Bien', 'Servicio']);
+
 export function listarTenders({
   departamento,
   estado,
   q,
-  soloBienes,
+  objeto,
   ocultarVencidas,
   page = 1,
   pageSize = 20,
@@ -87,8 +90,9 @@ export function listarTenders({
     condiciones.push('(t.descripcion LIKE @q OR t.entidad LIKE @q)');
     params.q = `%${q}%`;
   }
-  if (soloBienes) {
-    condiciones.push("t.objeto = 'Bien'");
+  if (objeto && OBJETOS_VALIDOS.has(objeto)) {
+    condiciones.push('t.objeto = @objeto');
+    params.objeto = objeto;
   }
   if (ocultarVencidas) {
     condiciones.push(`(t.cotizacion_fin IS NULL OR ${COTIZACION_FIN_ORDENABLE} >= @ahora)`);

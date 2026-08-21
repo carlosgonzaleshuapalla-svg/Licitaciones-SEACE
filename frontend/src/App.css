@@ -164,6 +164,15 @@
   max-width: 640px;
 }
 
+.ayuda-objeto {
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-width: 640px;
+}
+
 /* --- Tender list / card --- */
 
 .tender-list {

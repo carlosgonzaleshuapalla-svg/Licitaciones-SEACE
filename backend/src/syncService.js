@@ -119,7 +119,7 @@ export async function runSync({ log = console.log } = {}) {
   try {
     log('Iniciando sincronización con SEACE...');
     const { registros, completo } = await fetchTodosLosRegistros(log);
-    log(`Buscador devolvió ${registros.length} contrataciones (Bien + Vigente).`);
+    log(`Buscador devolvió ${registros.length} contrataciones (Bien+Servicio, Vigente).`);
 
     for (const record of registros) {
       if (!record?.idContrato) continue;
@@ -143,15 +143,16 @@ export async function runSync({ log = console.log } = {}) {
     );
 
     // Cualquier tender que ya estaba en la base pero no vino en esta
-    // respuesta ya no es Bien+Vigente (cambió de estado o se cerró): se
-    // quita del portal. Solo se hace si la paginación fue completa —
-    // sobre una lista parcial, borrar sería quitar contratos que siguen
-    // vigentes y que simplemente no llegamos a ver por un fallo de red.
+    // respuesta ya no es Bien/Servicio+Vigente (cambió de estado o se
+    // cerró): se quita del portal. Solo se hace si la paginación fue
+    // completa — sobre una lista parcial, borrar sería quitar contratos
+    // que siguen vigentes y que simplemente no llegamos a ver por un
+    // fallo de red.
     let eliminados = 0;
     if (completo) {
       eliminados = pruneTendersNotIn(idsContrato);
       if (eliminados > 0) {
-        log(`${eliminados} contrato(s) ya no están Bien+Vigente y se quitaron del portal.`);
+        log(`${eliminados} contrato(s) ya no están Bien/Servicio+Vigente y se quitaron del portal.`);
       }
     } else {
       log('Paginación incompleta por errores de red: se omite la limpieza de contratos vencidos en esta corrida.');

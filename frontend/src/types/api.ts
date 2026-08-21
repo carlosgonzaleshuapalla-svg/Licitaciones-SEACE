@@ -60,11 +60,15 @@ export interface SyncResponse {
   timestamp: string;
 }
 
+// El portal solo sincroniza estos dos tipos de contratación (Obra y
+// Consultoría de Obra quedan fuera de alcance).
+export type ObjetoContrato = "Bien" | "Servicio";
+
 export interface TendersQuery {
   departamento?: string;
   estado?: string;
   q?: string;
-  soloBienes?: boolean;
+  objeto?: ObjetoContrato;
   ocultarVencidas?: boolean;
   page?: number;
   pageSize?: number;
