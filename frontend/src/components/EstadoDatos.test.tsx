@@ -63,6 +63,13 @@ describe("EstadoDatos", () => {
     expect(screen.getByRole("button", { name: /actualizar lista/i })).toBeInTheDocument();
   });
 
+  it("no avisa si solo se está refrescando la lista y ya no falta ningún detalle", () => {
+    const { container } = render(
+      <EstadoDatos estado={{ ...base, sincronizando: true }} onActualizar={() => {}} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it("avisa cuando todavía no hay ninguna licitación descargada", () => {
     render(
       <EstadoDatos

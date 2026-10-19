@@ -19,8 +19,7 @@ function hora(iso: string | null): string | null {
 export function EstadoDatos({ estado, onActualizar }: EstadoDatosProps) {
   if (!estado) return null;
 
-  const { bloqueado, sincronizando, total, conDetalle, pendientesDetalle } =
-    estado;
+  const { bloqueado, total, conDetalle, pendientesDetalle } = estado;
 
   if (bloqueado) {
     const proximo = hora(estado.proximoIntento);
@@ -37,7 +36,9 @@ export function EstadoDatos({ estado, onActualizar }: EstadoDatosProps) {
     );
   }
 
-  if (sincronizando || pendientesDetalle > 0) {
+  // Solo se avisa si de verdad faltan detalles. Refrescar la lista con todo
+  // ya descargado (lo normal tras cargar la semilla) no merece un aviso.
+  if (pendientesDetalle > 0) {
     return (
       <div className="estado-datos estado-datos-info" role="status">
         <strong>Descargando datos desde SEACE…</strong>

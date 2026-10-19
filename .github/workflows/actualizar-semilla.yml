@@ -1,0 +1,66 @@
+name: Actualizar semilla de datos
+
+# Cada pocas horas guarda una foto de la base del servidor en la rama `data`.
+# Render (plan gratis) pierde su disco al dormirse; al despertar carga esa foto
+# y no tiene que volver a bajar todo de SEACE (más de una hora a ritmo seguro).
+# Esta tarea NO consulta a SEACE: solo despierta a Render, espera a que este
+# sincronice y le pide la foto (/api/export).
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: semilla
+  cancel-in-progress: false
+
+env:
+  URL_BASE: https://licitaciones-seace-hzup.onrender.com
+
+jobs:
+  semilla:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Esperar datos frescos y completos en Render
+        id: esperar
+        run: |
+          if python3 .github/scripts/esperar_sync.py "$URL_BASE"; then
+            echo "listo=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Render no tuvo datos frescos y completos a tiempo; no se publica semilla esta vez."
+            echo "listo=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Descargar y validar la semilla
+        id: validar
+        if: steps.esperar.outputs.listo == 'true'
+        run: |
+          curl -fsS --retry 3 --retry-delay 10 -m 180 -o semilla.json.gz "$URL_BASE/api/export"
+          if python3 .github/scripts/validar_semilla.py semilla.json.gz; then
+            echo "valida=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::La semilla descargada no pasó la validación; se conserva la anterior."
+            echo "valida=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publicar en la rama data (un solo commit, sin historial)
+        if: steps.validar.outputs.valida == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir publicar && cp semilla.json.gz publicar/seed.json.gz
+          cd publicar
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seed.json.gz
+          git commit -q -m "Semilla de datos $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+          echo "Semilla publicada en la rama data."

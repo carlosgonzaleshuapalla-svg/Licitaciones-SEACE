@@ -165,3 +165,38 @@ manual bajo pedido (sin setup), `CronCreate` local (automático pero solo
 mientras esta sesión de Claude Code siga abierta, máx. 7 días), o que el
 usuario despliegue el backend ya construido en `backend/` en un host propio
 para tener refresco real 24/7 sin depender de ninguna sesión.
+
+## Semilla de datos (persistencia sin base de datos externa) — oct 2026
+
+Problema: el disco de Render (plan gratis) es efímero. Al dormirse (15 min sin
+visitas) el servicio pierde la base y volver a bajar ~2500 detalles de SEACE
+a ritmo seguro (1 petición / 2 s) toma más de una hora.
+
+Hallazgos medidos contra SEACE real (oct 2026) que condicionan el diseño:
+- SEACE aplica un **límite de ritmo por IP**, no un bloqueo permanente. 1 petición
+  cada 2 s (30/min) pasa; ráfagas de ~3/s se bloquean en segundos; el 403 se
+  levanta solo (a veces en <30 s, con uso sostenido puede pasar de 1 min).
+- Las cabeceras importan: un `User-Agent: Mozilla/5.0` pelado recibe 403; el
+  cliente del backend envía un UA de Chrome completo y pasa.
+- El ID de ítem de SEACE (`idContratoItem`) es del catálogo CUBSO: se repite
+  entre licitaciones y dentro de una. NO es clave. `items` usa clave propia.
+
+Diseño:
+1. `GET /api/export` (backend/src/semilla.js) entrega una foto gzip de toda la
+   base (licitaciones + ítems + etapas + marca `sincronizadoEn`).
+2. Al arrancar con la base **vacía**, `cargarSemillaSiVacia()` la importa (19 ms
+   para 2565 licitaciones) desde la rama `data` del repo
+   (`raw.githubusercontent.com/.../data/seed.json.gz`, variable `SEMILLA_URL`) y,
+   si falla, desde `backend/seed/seed.json.gz` (copia incluida en el repo). Luego
+   la sync normal solo pide a SEACE lo que cambió (lista + detalles nuevos).
+3. `.github/workflows/actualizar-semilla.yml` (cada 6 h) despierta a Render,
+   espera una sync reciente y completa, valida (>=1000 licitaciones, >=97 % con
+   detalle, marca de sync) y publica la foto en la rama `data` (un solo commit,
+   force-push, sin historial). No consulta a SEACE. La rama `data` no dispara
+   redespliegues de Render (solo despliega `main`).
+4. La semilla es dato externo: se valida estrictamente al importar (versión,
+   tipos, límites de tamaño, gzip acotado) y nunca pisa una base con datos.
+
+Generar una semilla a mano (p. ej. la primera):
+`SEACE_DB_PATH=/ruta/base.db npm run semilla:exportar -- salida.json.gz`
+(se niega si <97 % tiene detalle; `--forzar` para saltarlo).

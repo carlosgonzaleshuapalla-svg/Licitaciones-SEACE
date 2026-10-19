@@ -26,3 +26,15 @@ export const syncLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Ya se sincronizó hace poco. Espera unos minutos antes de volver a intentar.' },
 });
+
+/**
+ * /api/export arma y comprime toda la base (~2500 licitaciones): útil para
+ * la tarea que guarda la semilla, pesado si se abusa. Pocas por IP.
+ */
+export const exportLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas exportaciones. Espera unos minutos.' },
+});

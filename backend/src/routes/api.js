@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { listarTenders, obtenerTenderDetalle, obtenerMeta } from '../tendersRepo.js';
 import { runSync, getSyncStatus } from '../syncService.js';
-import { syncLimiter } from '../security.js';
+import { syncLimiter, exportLimiter } from '../security.js';
+import { exportarSemilla, comprimirSemilla, infoSemilla } from '../semilla.js';
 
 export const apiRouter = Router();
 
@@ -43,7 +44,20 @@ apiRouter.get('/tenders/:id', (req, res) => {
 // licitaciones ya tienen su detalle descargado). Lo usa el frontend para
 // avisar cuando lo que se ve es parcial.
 apiRouter.get('/status', (req, res) => {
-  res.json(getSyncStatus());
+  res.json({ ...getSyncStatus(), semilla: infoSemilla() });
+});
+
+// Foto comprimida de toda la base (la "semilla"). Con ella un servidor recién
+// despertado (disco vacío) arranca con los datos listos en segundos en vez de
+// bajar todo de SEACE otra vez. Ver semilla.js. Son datos públicos de SEACE.
+apiRouter.get('/export', exportLimiter, (req, res) => {
+  const semilla = exportarSemilla({ sincronizadoEn: getSyncStatus().ultimoExito });
+  res.set({
+    'Content-Type': 'application/gzip',
+    'Content-Disposition': 'attachment; filename="seed.json.gz"',
+    'Cache-Control': 'no-store',
+  });
+  res.send(comprimirSemilla(semilla));
 });
 
 // La sincronización puede tardar varios minutos (descarga detalles de a poco

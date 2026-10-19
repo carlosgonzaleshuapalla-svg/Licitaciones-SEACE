@@ -1,5 +1,6 @@
 import { createApp } from './app.js';
 import { startScheduledSync } from './syncService.js';
+import { cargarSemillaSiVacia } from './semilla.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -12,7 +13,15 @@ process.on('unhandledRejection', (err) => {
 
 const app = createApp();
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`SEACE backend escuchando en http://localhost:${PORT}`);
+  // Con el disco vacío (arranque en frío en Render) primero se carga la
+  // semilla para servir datos completos enseguida; recién después se
+  // sincroniza con SEACE, que solo pedirá lo que haya cambiado.
+  try {
+    await cargarSemillaSiVacia({ log: console.log });
+  } catch (err) {
+    console.error('Falló la carga de la semilla:', err);
+  }
   startScheduledSync({ log: console.log });
 });
