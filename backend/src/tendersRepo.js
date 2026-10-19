@@ -137,11 +137,13 @@ export function obtenerTenderDetalle(idContrato) {
     .all(idContrato);
 
   const itemsRows = db
-    .prepare(`SELECT id_item, producto, cantidad, unidad_medida, ciudad FROM items WHERE id_contrato = ? ORDER BY id_item`)
+    .prepare(`SELECT id, producto, cantidad, unidad_medida, ciudad FROM items WHERE id_contrato = ? ORDER BY id`)
     .all(idContrato);
 
   const items = itemsRows.map((it) => ({
-    idItem: it.id_item,
+    // id propio de la fila (único). El id_item de SEACE es del catálogo y
+    // se repite, no sirve como identificador (ni como key en el frontend).
+    idItem: it.id,
     producto: it.producto,
     cantidad: it.cantidad,
     unidadMedida: it.unidad_medida,

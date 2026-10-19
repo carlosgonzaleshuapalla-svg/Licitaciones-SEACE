@@ -40,11 +40,39 @@ db.exec(`
     cotizacion_fin     TEXT,
     cantidad_items     INTEGER NOT NULL DEFAULT 0,
     es_producto_rapido INTEGER NOT NULL DEFAULT 0,
+    -- 1 cuando ya se descargó el detalle (items + etapas) de este contrato.
+    -- Permite sincronizar de forma incremental: solo se piden a SEACE los
+    -- detalles que faltan, no los ~2300 en cada corrida.
+    detalle_ok         INTEGER NOT NULL DEFAULT 0,
     updated_at         TEXT NOT NULL
   );
+`);
 
+// --- Migraciones de bases creadas con versiones anteriores del esquema ---
+
+// (1) tenders.detalle_ok no existía.
+if (!db.pragma('table_info(tenders)').some((c) => c.name === 'detalle_ok')) {
+  db.exec(`ALTER TABLE tenders ADD COLUMN detalle_ok INTEGER NOT NULL DEFAULT 0`);
+}
+
+// (2) items usaba id_item (el ID de catálogo CUBSO de SEACE) como clave
+// primaria. Ese ID NO es único: el mismo producto aparece en decenas de
+// licitaciones (y hasta repetido dentro de una), así que cada contrato
+// nuevo le "robaba" el ítem al anterior y miles de licitaciones quedaban
+// sin productos. Se recrea la tabla con clave propia y se marca todo el
+// detalle como pendiente para volver a descargarlo bien.
+const itemsViejo =
+  db.pragma('table_info(items)').length > 0 &&
+  !db.pragma('table_info(items)').some((c) => c.name === 'id');
+if (itemsViejo) {
+  db.exec(`DROP TABLE items`);
+  db.exec(`UPDATE tenders SET detalle_ok = 0, cantidad_items = 0`);
+}
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS items (
-    id_item       INTEGER PRIMARY KEY,
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_item       INTEGER,            -- ID de catálogo CUBSO: se repite, NO es clave
     id_contrato   INTEGER NOT NULL REFERENCES tenders(id_contrato) ON DELETE CASCADE,
     producto      TEXT,
     cantidad      REAL,
@@ -92,21 +120,21 @@ const upsertTenderStmt = db.prepare(`
     fecha_publicacion = excluded.fecha_publicacion,
     cotizacion_inicio = excluded.cotizacion_inicio,
     cotizacion_fin = excluded.cotizacion_fin,
-    cantidad_items = excluded.cantidad_items,
     es_producto_rapido = excluded.es_producto_rapido,
     updated_at = excluded.updated_at
 `);
+// Ojo: al re-sincronizar la cabecera NO se tocan cantidad_items ni
+// detalle_ok. Esos los maneja replaceTenderDetail; pisarlos acá borraría
+// el detalle ya descargado en cada corrida.
 
-const upsertItemStmt = db.prepare(`
+const insertItemStmt = db.prepare(`
   INSERT INTO items (id_item, id_contrato, producto, cantidad, unidad_medida, ciudad)
   VALUES (@id_item, @id_contrato, @producto, @cantidad, @unidad_medida, @ciudad)
-  ON CONFLICT(id_item) DO UPDATE SET
-    id_contrato = excluded.id_contrato,
-    producto = excluded.producto,
-    cantidad = excluded.cantidad,
-    unidad_medida = excluded.unidad_medida,
-    ciudad = excluded.ciudad
 `);
+
+const marcarDetalleOkStmt = db.prepare(
+  `UPDATE tenders SET cantidad_items = ?, detalle_ok = 1 WHERE id_contrato = ?`,
+);
 
 const upsertEtapaStmt = db.prepare(`
   INSERT INTO etapas (id_contrato_etapa, id_contrato, nombre, inicio, fin)
@@ -144,7 +172,8 @@ export function upsertTenderHeader(tender) {
 
 /**
  * Reemplaza items + etapas + departamentos de un contrato en una sola
- * transacción, y actualiza cantidad_items en la cabecera.
+ * transacción, y deja la cabecera marcada con detalle_ok = 1 y su
+ * cantidad_items real.
  */
 export const replaceTenderDetail = db.transaction((idContrato, items, etapas) => {
   deleteItemsForContratoStmt.run(idContrato);
@@ -154,7 +183,7 @@ export const replaceTenderDetail = db.transaction((idContrato, items, etapas) =>
   const departamentosVistos = new Set();
 
   for (const item of items) {
-    upsertItemStmt.run(item);
+    insertItemStmt.run(item);
     const dep = extraerDepartamento(item.ciudad);
     if (dep && !departamentosVistos.has(dep)) {
       departamentosVistos.add(dep);
@@ -166,8 +195,36 @@ export const replaceTenderDetail = db.transaction((idContrato, items, etapas) =>
     upsertEtapaStmt.run(etapa);
   }
 
-  db.prepare(`UPDATE tenders SET cantidad_items = ? WHERE id_contrato = ?`).run(items.length, idContrato);
+  marcarDetalleOkStmt.run(items.length, idContrato);
 });
+
+/**
+ * De la lista de ids dada (en su orden original, p. ej. del más reciente al
+ * más antiguo) devuelve solo los que todavía no tienen el detalle
+ * descargado. Es lo que permite sincronizar de forma incremental.
+ */
+export function filtrarPendientesDetalle(idsEnOrden) {
+  const pendientes = new Set(
+    db.prepare(`SELECT id_contrato FROM tenders WHERE detalle_ok = 0`).all().map((r) => r.id_contrato),
+  );
+  return idsEnOrden.filter((id) => pendientes.has(id));
+}
+
+/** Conteos para mostrar al usuario qué tan completo está lo que ve. */
+export function contarEstadoDatos() {
+  const row = db
+    .prepare(
+      `SELECT COUNT(*) AS total,
+              COALESCE(SUM(detalle_ok), 0) AS con_detalle
+       FROM tenders`,
+    )
+    .get();
+  return {
+    total: row.total,
+    conDetalle: row.con_detalle,
+    pendientesDetalle: row.total - row.con_detalle,
+  };
+}
 
 /**
  * Elimina de la base local los tenders cuyo id_contrato NO está en

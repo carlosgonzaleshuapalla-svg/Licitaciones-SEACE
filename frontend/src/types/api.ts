@@ -56,8 +56,27 @@ export interface TendersResponse {
 
 export interface SyncResponse {
   ok: boolean;
-  sincronizados: number;
+  // La sincronización corre en segundo plano: "iniciado" = ya arrancó.
+  iniciado?: boolean;
+  sincronizados?: number;
+  // Si no se pudo iniciar: "ya-en-curso" | "cooldown" | "bloqueado".
+  motivo?: string;
+  proximoIntento?: string | null;
   timestamp: string;
+}
+
+// Estado de la sincronización con SEACE y qué tan completos están los datos.
+export interface SyncStatus {
+  sincronizando: boolean;
+  // SEACE rechazó nuestras peticiones (firewall) y estamos esperando para reintentar.
+  bloqueado: boolean;
+  bloqueadoDesde: string | null;
+  ultimoIntento: string | null;
+  ultimoExito: string | null;
+  proximoIntento: string | null;
+  total: number;
+  conDetalle: number;
+  pendientesDetalle: number;
 }
 
 // El portal solo sincroniza estos dos tipos de contratación (Obra y

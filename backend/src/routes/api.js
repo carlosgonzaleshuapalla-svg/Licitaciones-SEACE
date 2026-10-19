@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { listarTenders, obtenerTenderDetalle, obtenerMeta } from '../tendersRepo.js';
-import { runSync } from '../syncService.js';
+import { runSync, getSyncStatus } from '../syncService.js';
 import { syncLimiter } from '../security.js';
 
 export const apiRouter = Router();
@@ -39,7 +39,25 @@ apiRouter.get('/tenders/:id', (req, res) => {
   res.json(detalle);
 });
 
+// Estado de la sincronización y qué tan completos están los datos (cuántas
+// licitaciones ya tienen su detalle descargado). Lo usa el frontend para
+// avisar cuando lo que se ve es parcial.
+apiRouter.get('/status', (req, res) => {
+  res.json(getSyncStatus());
+});
+
+// La sincronización puede tardar varios minutos (descarga detalles de a poco
+// para no saturar a SEACE), demasiado para dejar la petición abierta. Se
+// dispara en segundo plano y se responde enseguida; el avance se consulta
+// en /api/status. Los rechazos inmediatos (ya en curso, cooldown, SEACE
+// bloqueando) sí se devuelven tal cual.
 apiRouter.post('/sync', syncLimiter, async (req, res) => {
-  const resultado = await runSync({ log: console.log });
-  res.json(resultado);
+  const corrida = runSync({ log: console.log, origen: 'manual' });
+  corrida.catch(() => {}); // runSync ya atrapa sus errores; por si acaso
+  const rechazoInmediato = await Promise.race([
+    corrida,
+    new Promise((resolve) => setTimeout(() => resolve(null), 50)),
+  ]);
+  if (rechazoInmediato) return res.json(rechazoInmediato);
+  res.status(202).json({ ok: true, iniciado: true, timestamp: new Date().toISOString() });
 });

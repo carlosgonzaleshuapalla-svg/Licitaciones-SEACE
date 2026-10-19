@@ -1,5 +1,24 @@
 import { useState } from "react";
 import { postSync } from "../api/client";
+import type { SyncResponse } from "../types/api";
+
+// La sincronización corre en segundo plano, así que la respuesta casi nunca
+// es "completada": dice si arrancó o por qué no. El avance real lo muestra el
+// aviso de estado de arriba.
+function mensajeDe(res: SyncResponse): string {
+  if (res.iniciado)
+    return "Sincronización iniciada en segundo plano. El avance aparece arriba.";
+  switch (res.motivo) {
+    case "ya-en-curso":
+      return "Ya hay una sincronización en curso.";
+    case "cooldown":
+      return "Se sincronizó hace instantes. Espera un minuto e intenta de nuevo.";
+    case "bloqueado":
+      return "SEACE está limitando el acceso; se reintenta solo más tarde.";
+    default:
+      return "Sincronización solicitada.";
+  }
+}
 
 interface SyncButtonProps {
   onSincronizado: () => void;
@@ -16,9 +35,7 @@ export function SyncButton({ onSincronizado }: SyncButtonProps) {
     setEsError(false);
     try {
       const res = await postSync();
-      setMensaje(
-        `Sincronización completada: ${res.sincronizados} licitaciones actualizadas.`,
-      );
+      setMensaje(mensajeDe(res));
       onSincronizado();
     } catch (err) {
       setEsError(true);

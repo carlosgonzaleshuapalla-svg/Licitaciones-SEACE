@@ -1,6 +1,7 @@
 import type {
   Meta,
   SyncResponse,
+  SyncStatus,
   TenderDetail,
   TendersQuery,
   TendersResponse,
@@ -65,6 +66,10 @@ function buildQueryString(query: TendersQuery): string {
 
 export function getMeta(): Promise<Meta> {
   return request<Meta>("/api/meta");
+}
+
+export function getStatus(): Promise<SyncStatus> {
+  return request<SyncStatus>("/api/status");
 }
 
 export function getTenders(query: TendersQuery): Promise<TendersResponse> {

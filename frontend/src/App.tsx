@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { getMeta, getTenderDetail, getTenders } from "./api/client";
+import { getMeta, getStatus, getTenderDetail, getTenders } from "./api/client";
 import { Filtros, type FiltrosState } from "./components/Filtros";
 import { TenderList } from "./components/TenderList";
 import { Paginacion } from "./components/Paginacion";
 import { SyncButton } from "./components/SyncButton";
+import { EstadoDatos } from "./components/EstadoDatos";
 import { TenderDetailPanel } from "./components/TenderDetailPanel";
-import type { Meta, TenderDetail, TenderSummary } from "./types/api";
+import type { Meta, SyncStatus, TenderDetail, TenderSummary } from "./types/api";
 import "./App.css";
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 350;
+const STATUS_POLL_MS = 30_000;
 
 function App() {
   const [meta, setMeta] = useState<Meta>({ departamentos: [], estados: [] });
@@ -29,6 +31,8 @@ function App() {
   const [cargandoLista, setCargandoLista] = useState(true);
   const [errorLista, setErrorLista] = useState<string | null>(null);
   const [refrescar, setRefrescar] = useState(0);
+  const [estado, setEstado] = useState<SyncStatus | null>(null);
+  const [refrescarEstado, setRefrescarEstado] = useState(0);
 
   const [seleccionadoId, setSeleccionadoId] = useState<
     TenderSummary["idContrato"] | null
@@ -46,6 +50,25 @@ function App() {
         setMeta({ departamentos: [], estados: ["Vigente", "En Evaluación", "Culminado"] });
       });
   }, []);
+
+  // Estado de la sincronización: avisa si lo que se ve es parcial y por qué.
+  useEffect(() => {
+    let activo = true;
+    const cargar = () =>
+      getStatus()
+        .then((s) => {
+          if (activo) setEstado(s);
+        })
+        .catch(() => {
+          // Si /api/status falla no se bloquea la app: simplemente no hay aviso.
+        });
+    cargar();
+    const t = setInterval(cargar, STATUS_POLL_MS);
+    return () => {
+      activo = false;
+      clearInterval(t);
+    };
+  }, [refrescarEstado]);
 
   // Debounce del texto libre de búsqueda.
   useEffect(() => {
@@ -150,11 +173,24 @@ function App() {
             Contrataciones vigentes del Estado peruano, listas para cotizar
           </p>
         </div>
-        <SyncButton onSincronizado={() => setRefrescar((r) => r + 1)} />
+        <SyncButton
+          onSincronizado={() => {
+            setRefrescar((r) => r + 1);
+            setRefrescarEstado((r) => r + 1);
+          }}
+        />
       </header>
 
       <main className="app-main">
         <section className="panel-lista">
+          <EstadoDatos
+            estado={estado}
+            onActualizar={() => {
+              setRefrescar((r) => r + 1);
+              setRefrescarEstado((r) => r + 1);
+            }}
+          />
+
           <Filtros
             filtros={filtros}
             departamentos={meta.departamentos}
