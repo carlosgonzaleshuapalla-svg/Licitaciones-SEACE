@@ -38,7 +38,7 @@ while time.time() - inicio < LIMITE_S:
             f"bloqueado={s.get('bloqueado')} ultimoExito_hace_s={None if edad is None else int(edad)}",
             flush=True,
         )
-        if total >= 1000 and edad is not None and edad <= MAX_EDAD_EXITO_S and pend <= total * MAX_PENDIENTES:
+        if total >= 100 and edad is not None and edad <= MAX_EDAD_EXITO_S and pend <= total * MAX_PENDIENTES:
             print("Listo: datos frescos y completos.")
             sys.exit(0)
     except Exception as e:  # el servidor puede estar arrancando en frío

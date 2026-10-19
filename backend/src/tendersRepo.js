@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { generarProveedores } from './providerLinks.js';
+import { ahoraLimaOrdenable } from './fechas.js';
 
 const getCiudadesStmt = db.prepare(`
   SELECT departamento FROM tender_departamentos WHERE id_contrato = ? ORDER BY departamento
@@ -23,13 +24,6 @@ function fechaOrdenable(columnaSql) {
 
 const FECHA_PUBLICACION_ORDENABLE = fechaOrdenable('t.fecha_publicacion');
 const COTIZACION_FIN_ORDENABLE = fechaOrdenable('t.cotizacion_fin');
-
-/** "ahora" en el mismo formato "YYYYMMDDHH:mm:ss" que fechaOrdenable(). */
-function ahoraOrdenable() {
-  const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
-}
 
 function rowToSummary(row) {
   return {
@@ -96,7 +90,7 @@ export function listarTenders({
   }
   if (ocultarVencidas) {
     condiciones.push(`(t.cotizacion_fin IS NULL OR ${COTIZACION_FIN_ORDENABLE} >= @ahora)`);
-    params.ahora = ahoraOrdenable();
+    params.ahora = ahoraLimaOrdenable();
   }
 
   const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';

@@ -21,7 +21,6 @@ function App() {
     estado: "Vigente",
     q: "",
     objeto: "Bien",
-    ocultarVencidas: true,
   });
   const [qDebounced, setQDebounced] = useState("");
 
@@ -83,7 +82,6 @@ function App() {
     filtros.departamento,
     filtros.estado,
     filtros.objeto,
-    filtros.ocultarVencidas,
     qDebounced,
   ]);
 
@@ -98,7 +96,8 @@ function App() {
       estado: filtros.estado || undefined,
       q: qDebounced || undefined,
       objeto: filtros.objeto || undefined,
-      ocultarVencidas: filtros.ocultarVencidas,
+      // Siempre solo lo que aún se puede cotizar (el portal no es un histórico).
+      ocultarVencidas: true,
       page,
       pageSize: PAGE_SIZE,
     })
@@ -126,7 +125,6 @@ function App() {
     filtros.departamento,
     filtros.estado,
     filtros.objeto,
-    filtros.ocultarVencidas,
     qDebounced,
     page,
     refrescar,

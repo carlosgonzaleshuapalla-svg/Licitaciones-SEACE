@@ -221,6 +221,41 @@ describe('un 403 pasajero (SEACE se recupera solo en segundos) NO abandona la co
   });
 });
 
+describe('solo se guardan las licitaciones con plazo de cotización abierto (sin histórico)', () => {
+  beforeEach(limpiar);
+
+  test('las vencidas ni se guardan ni se les pide el detalle', async () => {
+    const ids = [BASE + 601, BASE + 602, BASE + 603];
+    const fake = crearFake({ ids });
+    fake.setRegistros((r) =>
+      r.idContrato === BASE + 602 ? { ...r, fecFinCotizacion: '01/01/2020 10:00:00' } : r,
+    );
+
+    await runSync({ ...rapido, client: fake });
+
+    assert.equal(fake.llamadas.detalle, 2, 'no se pide el detalle de la vencida');
+    assert.ok(obtenerTenderDetalle(BASE + 601));
+    assert.ok(obtenerTenderDetalle(BASE + 603));
+    assert.equal(obtenerTenderDetalle(BASE + 602), null, 'la vencida no queda guardada');
+  });
+
+  test('una que estaba guardada y luego vence sale sola en la siguiente sincronización', async () => {
+    const ids = [BASE + 611, BASE + 612];
+    const fake = crearFake({ ids });
+    await runSync({ ...rapido, client: fake });
+    assert.ok(obtenerTenderDetalle(BASE + 612));
+
+    fake.setRegistros((r) =>
+      r.idContrato === BASE + 612 ? { ...r, fecFinCotizacion: '01/01/2020 10:00:00' } : r,
+    );
+    const r = await runSync({ ...rapido, client: fake });
+
+    assert.equal(r.eliminados >= 1, true);
+    assert.equal(obtenerTenderDetalle(BASE + 612), null);
+    assert.ok(obtenerTenderDetalle(BASE + 611), 'la que sigue abierta se conserva');
+  });
+});
+
 describe('SEACE bloquea (403) durante la sincronización', () => {
   beforeEach(limpiar);
 

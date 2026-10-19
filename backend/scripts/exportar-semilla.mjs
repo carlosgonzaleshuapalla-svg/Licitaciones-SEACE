@@ -21,8 +21,8 @@ if (!salida || salida.startsWith('--')) {
 const semilla = exportarSemilla({ sincronizadoEn: Date.now() });
 const pct = semilla.total ? (semilla.conDetalle / semilla.total) * 100 : 0;
 console.log(`${semilla.total} licitaciones, ${semilla.conDetalle} con detalle (${pct.toFixed(1)} %).`);
-if (!forzar && (semilla.total < 1000 || pct < 97)) {
-  console.error('La base no está completa (se piden >= 1000 licitaciones y >= 97 % con detalle). Use --forzar para exportar igual.');
+if (!forzar && (semilla.total < 100 || pct < 97)) {
+  console.error('La base no está completa (se piden >= 100 licitaciones y >= 97 % con detalle). Use --forzar para exportar igual.');
   process.exit(2);
 }
 const buf = comprimirSemilla(semilla);

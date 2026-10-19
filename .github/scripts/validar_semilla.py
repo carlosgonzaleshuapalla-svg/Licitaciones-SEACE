@@ -18,8 +18,8 @@ if s.get("version") != 1:
     problemas.append("versión inesperada")
 if not isinstance(s.get("tenders"), list) or len(s["tenders"]) != total:
     problemas.append("la lista de licitaciones no coincide con el total")
-if total < 1000:
-    problemas.append("muy pocas licitaciones (<1000)")
+if total < 100:
+    problemas.append("muy pocas licitaciones (<100)")
 if total and con_detalle / total < 0.97:
     problemas.append("menos del 97 % con detalle")
 if not s.get("sincronizadoEn"):

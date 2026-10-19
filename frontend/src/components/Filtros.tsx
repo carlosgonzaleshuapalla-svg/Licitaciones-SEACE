@@ -8,7 +8,6 @@ export interface FiltrosState {
   // "" = Bien y Servicio juntos (el portal no sincroniza Obra ni
   // Consultoría de Obra, así que estas son las únicas opciones reales).
   objeto: ObjetoContrato | "";
-  ocultarVencidas: boolean;
 }
 
 interface FiltrosProps {
@@ -105,24 +104,11 @@ export function Filtros({
         contratación tal como lo clasifica la fuente.
       </p>
 
-      <div className="campo-checkbox">
-        <label>
-          <input
-            type="checkbox"
-            checked={filtros.ocultarVencidas}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              actualizar({ ocultarVencidas: e.target.checked })
-            }
-          />
-          Ocultar las que ya vencieron su fecha de cotización
-        </label>
-        <p className="ayuda">
-          SEACE a veces sigue marcando "Vigente" contratos cuya fecha límite
-          de cotización ya pasó (no lo controlamos, es un dato de su propio
-          sistema). Con esto activado, filtramos por la fecha real en vez de
-          confiar solo en la etiqueta de estado.
-        </p>
-      </div>
+      <p className="ayuda ayuda-objeto">
+        Solo se muestran licitaciones vigentes y con el plazo de cotización
+        todavía abierto. SEACE a veces sigue marcando "Vigente" contratos que
+        ya vencieron; esos se descartan aquí usando la fecha real de cierre.
+      </p>
     </div>
   );
 }

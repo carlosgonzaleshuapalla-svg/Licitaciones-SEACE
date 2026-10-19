@@ -1,4 +1,5 @@
 import * as clienteSeace from './seaceClient.js';
+import { cotizacionAbierta } from './fechas.js';
 import { SeaceBloqueadoError } from './seaceClient.js';
 import {
   upsertTenderHeader,
@@ -266,9 +267,17 @@ export async function runSync({
   try {
     log('Iniciando sincronización con SEACE...');
     const lista = await fetchTodosLosRegistros(client, log, pausasMs);
-    const { registros, completo } = lista;
+    const { completo } = lista;
     let bloqueado = lista.bloqueado;
-    log(`Buscador devolvió ${registros.length} contrataciones (Bien+Servicio, Vigente).`);
+
+    // SEACE marca como "Vigente" muchas contrataciones cuyo plazo de
+    // cotización ya venció (en una corrida real: 2054 de 2565, 80 %, algunas
+    // de 2024). Aquí no se quiere un histórico: solo se guarda y se baja el
+    // detalle de las que todavía se pueden cotizar. Las que ya vencieron y
+    // estaban guardadas salen solas en la limpieza de más abajo.
+    const registros = lista.registros.filter((r) => cotizacionAbierta(r?.fecFinCotizacion));
+    const vencidas = lista.registros.length - registros.length;
+    log(`Buscador devolvió ${lista.registros.length} contrataciones (Bien+Servicio, Vigente): ${registros.length} con plazo abierto, ${vencidas} ya vencidas (se omiten).`);
 
     for (const record of registros) {
       if (!record?.idContrato) continue;
@@ -287,15 +296,15 @@ export async function runSync({
     }
 
     // Cualquier tender que ya estaba en la base pero no vino en esta
-    // respuesta ya no es Bien/Servicio+Vigente (cambió de estado o se
-    // cerró): se quita del portal. Solo si la paginación fue completa —
+    // respuesta ya no es Bien/Servicio+Vigente con plazo abierto (cambió de
+    // estado, se cerró o venció): se quita del portal. Solo si la paginación fue completa —
     // sobre una lista parcial, borrar sería quitar contratos que siguen
     // vigentes y que simplemente no llegamos a ver.
     let eliminados = 0;
     if (completo) {
       eliminados = pruneTendersNotIn(idsContrato);
       if (eliminados > 0) {
-        log(`${eliminados} contrato(s) ya no están Bien/Servicio+Vigente y se quitaron del portal.`);
+        log(`${eliminados} contrato(s) ya no están vigentes con plazo abierto y se quitaron del portal.`);
       }
     } else {
       log('Lista incompleta: se omite la limpieza de contratos vencidos en esta corrida.');
