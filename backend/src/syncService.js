@@ -12,12 +12,20 @@ const PAGE_SIZE = 50;
 // El ritmo real hacia SEACE lo limita el propio cliente (ver seaceClient.js);
 // esto solo es cuántas peticiones de detalle pueden estar "en vuelo" a la vez.
 const DETAIL_CONCURRENCY = 3;
-// Si SEACE responde 403/429 este número de veces seguidas, se deja de
-// insistir en esta corrida: seguir golpeando un bloqueo solo lo prolonga.
-const MAX_BLOQUEOS_SEGUIDOS = 3;
+// Ante un 403/429 de SEACE se PAUSA y se reanuda en la misma corrida. Medido
+// contra SEACE real: el 403 es un límite de ritmo que se levanta solo en
+// menos de 30 s, así que basta una pausa corta. Si aun así sigue rechazando
+// tras todas estas pausas (1 min, 2 min, 5 min), se abandona la corrida y se
+// reintenta más tarde: seguir golpeando solo lo prolongaría.
+const PAUSAS_ANTE_BLOQUEO_MS = [60_000, 120_000, 300_000];
 
 export const SYNC_INTERVAL_MS = 30 * 60 * 1000; // cada 30 minutos
-const BACKOFF_MAX_MS = 2 * 60 * 60 * 1000; // tope de espera tras bloqueos: 2 h
+// Tras una corrida abandonada por bloqueo se reintenta pronto, con espera
+// creciente: 5 -> 10 -> 20 -> 30 min (tope).
+const BACKOFF_BASE_MS = 5 * 60 * 1000;
+const BACKOFF_MAX_MS = 30 * 60 * 1000;
+
+const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Criterio documentado en el LEDGER: "producto que se puede comprar rápido"
 // = objeto de contratación "Bien" (única señal honesta que da la fuente;
@@ -72,22 +80,30 @@ export function mapDetailToItemsAndEtapas(idContrato, detalle) {
  *    así que no debe usarse para decidir qué borrar.
  *  - `bloqueado`: true si el corte fue porque SEACE rechazó (403/429).
  */
-async function fetchTodosLosRegistros(client, log) {
+async function fetchTodosLosRegistros(client, log, pausasMs) {
   const registros = [];
   let page = 1;
   let totalElements = Infinity;
   let completo = true;
   let bloqueado = false;
+  let bloqueosSeguidos = 0;
 
   while ((page - 1) * PAGE_SIZE < totalElements) {
     let respuesta;
     try {
       respuesta = await client.buscarPagina({ page, pageSize: PAGE_SIZE });
+      bloqueosSeguidos = 0;
     } catch (err) {
+      if (err instanceof SeaceBloqueadoError && bloqueosSeguidos < pausasMs.length) {
+        const pausa = pausasMs[bloqueosSeguidos++];
+        log(`SEACE limitó el ritmo en la página ${page} (HTTP ${err.status}). Pausa de ${Math.round(pausa / 1000)} s y se reintenta.`);
+        await dormir(pausa);
+        continue; // mismo número de página
+      }
       bloqueado = err instanceof SeaceBloqueadoError;
       log(
         bloqueado
-          ? `SEACE bloqueó la página ${page} del buscador (HTTP ${err.status}). Se detiene la paginación.`
+          ? `SEACE siguió rechazando la página ${page} del buscador (HTTP ${err.status}). Se abandona esta corrida.`
           : `Error obteniendo página ${page} del buscador: ${err.message}. Se detiene la paginación.`,
       );
       completo = false;
@@ -106,18 +122,23 @@ async function fetchTodosLosRegistros(client, log) {
 
 /**
  * Descarga el detalle de los contratos pendientes, en el orden dado (los más
- * recientes primero), con un freno: tras MAX_BLOQUEOS_SEGUIDOS rechazos
- * seguidos de SEACE deja de pedir. Lo que no alcanzó a bajar queda
- * pendiente (detalle_ok = 0) para la siguiente corrida.
+ * recientes primero). Ante un 403/429 TODOS los trabajadores hacen una pausa
+ * compartida (SEACE se recupera solo en segundos) y el contrato rechazado
+ * vuelve a la cola; si tras agotar las pausas sigue rechazando, se abandona.
+ * Lo que no alcanzó a bajar queda pendiente (detalle_ok = 0) para la
+ * siguiente corrida.
  */
-async function descargarDetalles(client, pendientes, log) {
+async function descargarDetalles(client, pendientes, log, pausasMs) {
   const cola = [...pendientes];
   let sincronizados = 0;
   let bloqueosSeguidos = 0;
-  let bloqueado = false;
+  let pausaHasta = 0;
+  let abandonado = false;
 
   async function trabajador() {
-    while (!bloqueado) {
+    while (!abandonado) {
+      const espera = pausaHasta - Date.now();
+      if (espera > 0) await dormir(espera);
       const idContrato = cola.shift();
       if (idContrato === undefined) return;
       try {
@@ -128,10 +149,18 @@ async function descargarDetalles(client, pendientes, log) {
         bloqueosSeguidos = 0;
       } catch (err) {
         if (err instanceof SeaceBloqueadoError) {
-          bloqueosSeguidos++;
-          if (bloqueosSeguidos >= MAX_BLOQUEOS_SEGUIDOS) {
-            bloqueado = true;
-            log(`SEACE bloqueó ${bloqueosSeguidos} peticiones seguidas (HTTP ${err.status}). Se frena la descarga de detalles.`);
+          cola.unshift(idContrato); // se reintenta después de la pausa
+          // Varias peticiones en vuelo pueden fallar a la vez: solo la
+          // primera de la racha cuenta y fija la pausa.
+          if (Date.now() >= pausaHasta) {
+            if (bloqueosSeguidos >= pausasMs.length) {
+              abandonado = true;
+              log(`SEACE siguió rechazando tras ${pausasMs.length} pausas (HTTP ${err.status}). Se abandona esta corrida.`);
+            } else {
+              const pausa = pausasMs[bloqueosSeguidos++];
+              pausaHasta = Date.now() + pausa;
+              log(`SEACE limitó el ritmo (HTTP ${err.status}). Pausa de ${Math.round(pausa / 1000)} s y se reanuda.`);
+            }
           }
         } else {
           log(`Error sincronizando detalle del contrato ${idContrato}: ${err.message}`);
@@ -141,7 +170,7 @@ async function descargarDetalles(client, pendientes, log) {
   }
 
   await Promise.all(Array.from({ length: Math.min(DETAIL_CONCURRENCY, cola.length) }, trabajador));
-  return { sincronizados, bloqueado };
+  return { sincronizados, bloqueado: abandonado };
 }
 
 // --- Estado observable de la sincronización (lo muestra /api/status) ---
@@ -171,11 +200,11 @@ export function getSyncStatus() {
   };
 }
 
-/** Espera hasta la próxima corrida: normal, o creciente (30→60→120 min) si hay bloqueo. */
+/** Espera hasta la próxima corrida: normal, o creciente (5→10→20→30 min) si hay bloqueo. */
 function calcularProximaEspera() {
   if (!estado.bloqueado) return SYNC_INTERVAL_MS;
   const factor = 2 ** Math.max(0, estado.bloqueosSeguidos - 1);
-  return Math.min(SYNC_INTERVAL_MS * factor, BACKOFF_MAX_MS);
+  return Math.min(BACKOFF_BASE_MS * factor, BACKOFF_MAX_MS);
 }
 
 let syncEnCurso = false;
@@ -192,15 +221,16 @@ const SYNC_COOLDOWN_MS = 90 * 1000;
  *  1. Pagina el buscador (pocas peticiones) y guarda/actualiza cabeceras.
  *  2. Descarga SOLO los detalles que faltan, los más recientes primero.
  *  3. Si la lista quedó completa y no hubo bloqueo, quita lo que ya no está vigente.
- * Nunca lanza por fallos de red; ante un bloqueo de SEACE frena y lo registra.
+ * Nunca lanza por fallos de red; ante un 403 de SEACE pausa y reanuda, y si no cede lo registra.
  *
- * `client` e `saltarCooldown` son inyectables para poder probarlo sin red.
+ * `client`, `saltarCooldown` y `pausasMs` son inyectables para poder probarlo sin red ni esperas.
  */
 export async function runSync({
   log = console.log,
   client = clienteSeace,
   origen = 'programada',
   saltarCooldown = false,
+  pausasMs = PAUSAS_ANTE_BLOQUEO_MS,
 } = {}) {
   if (syncEnCurso) {
     log('Sincronización ya en curso, se omite este disparo.');
@@ -235,7 +265,7 @@ export async function runSync({
 
   try {
     log('Iniciando sincronización con SEACE...');
-    const lista = await fetchTodosLosRegistros(client, log);
+    const lista = await fetchTodosLosRegistros(client, log, pausasMs);
     const { registros, completo } = lista;
     let bloqueado = lista.bloqueado;
     log(`Buscador devolvió ${registros.length} contrataciones (Bien+Servicio, Vigente).`);
@@ -251,7 +281,7 @@ export async function runSync({
     if (!bloqueado) {
       const pendientes = filtrarPendientesDetalle(idsContrato);
       log(`${pendientes.length} contrato(s) con detalle pendiente (el resto ya estaba descargado).`);
-      const detalles = await descargarDetalles(client, pendientes, log);
+      const detalles = await descargarDetalles(client, pendientes, log, pausasMs);
       sincronizados = detalles.sincronizados;
       bloqueado = detalles.bloqueado;
     }
@@ -303,16 +333,16 @@ export async function runSync({
 
 /**
  * Corre la sync una vez al arrancar y luego de forma encadenada: la espera
- * hasta la siguiente corrida es SYNC_INTERVAL_MS, o crece (hasta 2 h) si
- * SEACE está bloqueando — así dejamos de golpearlo y se puede recuperar.
+ * hasta la siguiente corrida es SYNC_INTERVAL_MS, o 5→30 min si la anterior se
+ * abandonó por bloqueo de SEACE.
  */
-export function startScheduledSync({ log = console.log, client } = {}) {
+export function startScheduledSync({ log = console.log, client, pausasMs } = {}) {
   let timer = null;
   let detenido = false;
 
   const ciclo = async () => {
     try {
-      await runSync({ log, client });
+      await runSync({ log, client, pausasMs });
     } catch (err) {
       log(`Sync programada falló: ${err.message}`);
     }

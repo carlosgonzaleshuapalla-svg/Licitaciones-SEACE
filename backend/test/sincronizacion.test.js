@@ -9,6 +9,8 @@ import { obtenerTenderDetalle } from '../src/tendersRepo.js';
 
 const BASE = 999997000;
 const silencio = () => {};
+// Sin esperas reales: las pausas ante un 403 son de minutos en producción.
+const rapido = { log: silencio, saltarCooldown: true, pausasMs: [0, 0, 0] };
 
 function registro(id, extra = {}) {
   return {
@@ -44,7 +46,13 @@ function detalle() {
   };
 }
 
-function crearFake({ ids, bloquearListaEnPagina = null, bloquearDetallesTrasN = Infinity }) {
+function crearFake({
+  ids,
+  bloquearListaEnPagina = null,
+  bloquearDetallesTrasN = Infinity,
+  bloqueosTransitorios = 0, // los primeros N detalles dan 403 y luego SEACE se recupera
+  bloqueosListaTransitorios = 0, // ídem para las primeras N páginas de la lista
+}) {
   const llamadas = { detalle: 0, paginas: 0 };
   let registros = ids.map((id) => registro(id));
   return {
@@ -54,6 +62,7 @@ function crearFake({ ids, bloquearListaEnPagina = null, bloquearDetallesTrasN = 
     },
     async buscarPagina({ page, pageSize }) {
       llamadas.paginas++;
+      if (llamadas.paginas <= bloqueosListaTransitorios) throw new SeaceBloqueadoError(403, 'lista-transitorio');
       if (bloquearListaEnPagina !== null && page >= bloquearListaEnPagina) {
         throw new SeaceBloqueadoError(403, 'lista');
       }
@@ -62,6 +71,7 @@ function crearFake({ ids, bloquearListaEnPagina = null, bloquearDetallesTrasN = 
     },
     async listarCompleto() {
       llamadas.detalle++;
+      if (llamadas.detalle <= bloqueosTransitorios) throw new SeaceBloqueadoError(403, 'detalle-transitorio');
       if (llamadas.detalle > bloquearDetallesTrasN) throw new SeaceBloqueadoError(403, 'detalle');
       return detalle();
     },
@@ -78,7 +88,7 @@ describe('items: el id de catálogo de SEACE se repite y NO debe pisar licitacio
   test('licitaciones que comparten el mismo id de ítem conservan cada una sus ítems', async () => {
     const ids = [BASE + 1, BASE + 2, BASE + 3];
     const fake = crearFake({ ids });
-    await runSync({ log: silencio, client: fake, saltarCooldown: true });
+    await runSync({ ...rapido, client: fake });
 
     for (const id of ids) {
       const d = obtenerTenderDetalle(id);
@@ -114,6 +124,24 @@ describe('cliente de SEACE ante un firewall (403/429)', () => {
     await assert.rejects(() => cliente.buscarPagina({ page: 1, pageSize: 50 }), SeaceBloqueadoError);
   });
 
+  test('tras un 403 el cliente se frena (duplica el intervalo) y luego vuelve a acelerar con éxitos', async () => {
+    let n = 0;
+    const cliente = crearClienteSeace({
+      minIntervalMs: 2,
+      fetchImpl: async () => {
+        n++;
+        if (n === 1) return { ok: false, status: 403, statusText: 'Forbidden', json: async () => ({}) };
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    });
+    assert.equal(cliente.intervaloActualMs(), 2);
+    await assert.rejects(() => cliente.listarCompleto(1), SeaceBloqueadoError);
+    assert.equal(cliente.intervaloActualMs(), 4, 'duplica tras el 403');
+    for (let i = 0; i < 30; i++) await cliente.listarCompleto(i);
+    assert.ok(cliente.intervaloActualMs() < 4, 'con una racha de éxitos vuelve hacia la base');
+    assert.ok(cliente.intervaloActualMs() >= 2, 'sin bajar de la base');
+  });
+
   test('respeta la separación mínima entre peticiones aunque se lancen en paralelo', async () => {
     const inicios = [];
     const cliente = crearClienteSeace({
@@ -137,10 +165,10 @@ describe('sincronización incremental', () => {
     const ids = [BASE + 11, BASE + 12, BASE + 13, BASE + 14];
     const fake = crearFake({ ids });
 
-    await runSync({ log: silencio, client: fake, saltarCooldown: true });
+    await runSync({ ...rapido, client: fake });
     assert.equal(fake.llamadas.detalle, 4);
 
-    await runSync({ log: silencio, client: fake, saltarCooldown: true });
+    await runSync({ ...rapido, client: fake });
     assert.equal(fake.llamadas.detalle, 4, 'no debe pedir detalles que ya tiene');
 
     for (const id of ids) {
@@ -153,12 +181,43 @@ describe('sincronización incremental', () => {
   test('aun sin pedir detalles, la cabecera sí se actualiza (p. ej. plazo ampliado)', async () => {
     const ids = [BASE + 21];
     const fake = crearFake({ ids });
-    await runSync({ log: silencio, client: fake, saltarCooldown: true });
+    await runSync({ ...rapido, client: fake });
 
     fake.setRegistros((r) => ({ ...r, fecFinCotizacion: '31/12/2099 23:00:00' }));
-    await runSync({ log: silencio, client: fake, saltarCooldown: true });
+    await runSync({ ...rapido, client: fake });
 
     assert.equal(obtenerTenderDetalle(ids[0]).cotizacionFin, '31/12/2099 23:00:00');
+  });
+});
+
+
+describe('un 403 pasajero (SEACE se recupera solo en segundos) NO abandona la corrida', () => {
+  beforeEach(limpiar);
+
+  test('en los detalles: pausa, reintenta lo rechazado y termina todo en la misma corrida', async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => BASE + 400 + i);
+    const fake = crearFake({ ids, bloqueosTransitorios: 2 });
+
+    const r = await runSync({ ...rapido, client: fake });
+
+    assert.equal(r.ok, true, 'no debe quedar marcado como bloqueado');
+    assert.equal(getSyncStatus().bloqueado, false);
+    assert.equal(getSyncStatus().pendientesDetalle, 0);
+    // 10 detalles + los 2 rechazados que se reintentaron, ninguno perdido
+    assert.equal(fake.llamadas.detalle, 12);
+    for (const id of ids) assert.equal(obtenerTenderDetalle(id).items.length, 2);
+  });
+
+  test('en la lista: reintenta la misma página tras la pausa y completa la lista', async () => {
+    const ids = [BASE + 501, BASE + 502, BASE + 503];
+    const fake = crearFake({ ids, bloqueosListaTransitorios: 1 });
+
+    const r = await runSync({ ...rapido, client: fake });
+
+    assert.equal(r.ok, true);
+    assert.equal(fake.llamadas.paginas, 2, 'una página rechazada + la misma reintentada');
+    assert.ok(getSyncStatus().ultimoExito, 'la lista se completó, cuenta como éxito');
+    assert.equal(getSyncStatus().pendientesDetalle, 0);
   });
 });
 
@@ -169,7 +228,7 @@ describe('SEACE bloquea (403) durante la sincronización', () => {
     const ids = Array.from({ length: 30 }, (_, i) => BASE + 100 + i);
     const bloqueante = crearFake({ ids, bloquearDetallesTrasN: 2 });
 
-    const r = await runSync({ log: silencio, client: bloqueante, saltarCooldown: true });
+    const r = await runSync({ ...rapido, client: bloqueante });
 
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'bloqueado');
@@ -187,7 +246,7 @@ describe('SEACE bloquea (403) durante la sincronización', () => {
 
     // SEACE vuelve a responder: solo se piden los que faltaban
     const sano = crearFake({ ids });
-    const r2 = await runSync({ log: silencio, client: sano, saltarCooldown: true });
+    const r2 = await runSync({ ...rapido, client: sano });
     assert.equal(r2.ok, true);
     assert.equal(sano.llamadas.detalle, ids.length - yaBajados);
     const s2 = getSyncStatus();
@@ -199,10 +258,10 @@ describe('SEACE bloquea (403) durante la sincronización', () => {
   test('en la lista: no pide detalles ni borra nada de lo que ya había', async () => {
     limpiar();
     const viejo = crearFake({ ids: [BASE + 201, BASE + 202] });
-    await runSync({ log: silencio, client: viejo, saltarCooldown: true });
+    await runSync({ ...rapido, client: viejo });
 
     const bloqueado = crearFake({ ids: [BASE + 203], bloquearListaEnPagina: 1 });
-    const r = await runSync({ log: silencio, client: bloqueado, saltarCooldown: true });
+    const r = await runSync({ ...rapido, client: bloqueado });
 
     assert.equal(r.motivo, 'bloqueado');
     assert.equal(bloqueado.llamadas.detalle, 0);
@@ -214,13 +273,13 @@ describe('SEACE bloquea (403) durante la sincronización', () => {
   test('un disparo manual se rechaza mientras dure la espera tras un bloqueo', async () => {
     limpiar();
     const bloqueado = crearFake({ ids: [BASE + 301], bloquearListaEnPagina: 1 });
-    const prog = startScheduledSync({ log: silencio, client: bloqueado });
+    const prog = startScheduledSync({ log: silencio, client: bloqueado, pausasMs: [0, 0, 0] });
     for (let i = 0; i < 50 && !getSyncStatus().proximoIntento; i++) {
       await new Promise((r) => setTimeout(r, 20));
     }
     prog.stop();
 
-    const r = await runSync({ log: silencio, client: crearFake({ ids: [BASE + 301] }), origen: 'manual', saltarCooldown: true });
+    const r = await runSync({ ...rapido, client: crearFake({ ids: [BASE + 301] }), origen: 'manual' });
     assert.equal(r.ok, false);
     assert.equal(r.motivo, 'bloqueado');
     assert.ok(r.proximoIntento);

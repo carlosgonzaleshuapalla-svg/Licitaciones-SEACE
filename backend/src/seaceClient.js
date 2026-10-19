@@ -20,9 +20,17 @@ const FETCH_TIMEOUT_MS = 20_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
-// Separación mínima entre el inicio de dos peticiones a SEACE (ms). ~3 req/s
-// por defecto; ajustable por entorno si SEACE vuelve a limitar el acceso.
-const DEFAULT_MIN_INTERVAL_MS = Number(process.env.SEACE_MIN_INTERVAL_MS) || 350;
+// Separación mínima entre el inicio de dos peticiones a SEACE (ms).
+// Medido contra el SEACE real (oct 2026): 1 petición cada 2 s (30/min) y 1 por
+// segundo pasan sin problema en pruebas cortas, pero a ~1,1 s sostenido ya
+// aparecen 403 (el límite parece rondar las ~50 peticiones por minuto) y a ~3/s
+// se bloquea en segundos. El 403 se levanta solo, pero a veces tarda más de 1
+// min. Por eso base de 2 s, con auto-ajuste (ver abajo). Ajustable por entorno.
+const DEFAULT_MIN_INTERVAL_MS = Number(process.env.SEACE_MIN_INTERVAL_MS) || 2000;
+// Tras un 403 el intervalo se duplica (hasta este tope) y vuelve a la base
+// poco a poco con peticiones exitosas.
+const MAX_INTERVAL_MS = 16_000;
+const RACHA_PARA_ACELERAR = 25;
 
 const ANIO_FIJO = 2024; // la SPA oficial usa este valor fijo, no filtra por año real
 // 1=Bien, 2=Servicio, 3=Obra, 4=Consultoría de Obra (catálogo de SEACE).
@@ -54,12 +62,14 @@ export function crearClienteSeace({
 } = {}) {
   let ultimoInicio = 0;
   let cola = Promise.resolve();
+  let intervaloActual = minIntervalMs; // se auto-ajusta: sube ante un 403, baja con éxitos
+  let rachaExitos = 0;
 
   // Serializa los "turnos": cada petición espera a que pase minIntervalMs
   // desde el inicio de la anterior, sin importar cuántas estén en paralelo.
   function esperarTurno() {
     const turno = cola.then(async () => {
-      const espera = ultimoInicio + minIntervalMs - Date.now();
+      const espera = ultimoInicio + intervaloActual - Date.now();
       if (espera > 0) await sleep(espera);
       ultimoInicio = Date.now();
     });
@@ -83,12 +93,21 @@ export function crearClienteSeace({
         });
         clearTimeout(timeout);
         if (res.status === 403 || res.status === 429) {
+          // SEACE nos está limitando: ir más despacio de aquí en adelante.
+          rachaExitos = 0;
+          intervaloActual = Math.min(Math.max(intervaloActual, 1) * 2, MAX_INTERVAL_MS);
           throw new SeaceBloqueadoError(res.status, url);
         }
         if (!res.ok) {
           throw new Error(`HTTP ${res.status} ${res.statusText} para ${url}`);
         }
-        return await res.json();
+        const json = await res.json();
+        // Si viene yendo bien un buen rato, se vuelve a acelerar hacia la base.
+        if (intervaloActual > minIntervalMs && ++rachaExitos >= RACHA_PARA_ACELERAR) {
+          rachaExitos = 0;
+          intervaloActual = Math.max(minIntervalMs, Math.round(intervaloActual / 1.5));
+        }
+        return json;
       } catch (err) {
         clearTimeout(timeout);
         if (err instanceof SeaceBloqueadoError) throw err; // no se reintenta un bloqueo
@@ -102,6 +121,9 @@ export function crearClienteSeace({
   }
 
   return {
+    /** Intervalo actual entre peticiones (ms), tras el auto-ajuste. */
+    intervaloActualMs: () => intervaloActual,
+
     /** Trae una página del buscador de contrataciones (Bien+Servicio, Vigente). */
     buscarPagina({ page, pageSize }) {
       const url =
