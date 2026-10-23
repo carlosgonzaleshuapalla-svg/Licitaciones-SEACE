@@ -1,10 +1,13 @@
 name: Actualizar semilla de datos
 
-# Cada pocas horas guarda una foto de la base del servidor en la rama `data`.
-# Render (plan gratis) pierde su disco al dormirse; al despertar carga esa foto
-# y no tiene que volver a bajar todo de SEACE (más de una hora a ritmo seguro).
-# Esta tarea NO consulta a SEACE: solo despierta a Render, espera a que este
-# sincronice y le pide la foto (/api/export).
+# Cada pocas horas recolecta de SEACE las licitaciones vigentes, guarda una foto
+# en la rama `data` y avisa en Notion de las nuevas.
+#
+# Antes la foto se pedía al servidor de Render, pero SEACE bloquea la IP de
+# Render durante días y la semilla quedaba vieja. Ahora la recolección corre
+# aquí mismo: parte de la semilla anterior y baja de SEACE solo lo que falta,
+# con el mismo ritmo (1 pedido cada 2 s) y las mismas pausas ante bloqueo que
+# usa el servidor. Render solo la lee al despertar.
 
 on:
   schedule:
@@ -19,34 +22,47 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  URL_BASE: https://licitaciones-seace-hzup.onrender.com
+  # Base de Notion "Licitaciones ≤ 8 UIT (SEACE)". El token va en el secreto NOTION_TOKEN.
+  NOTION_DATABASE_ID: 043dc7ff539a49f4a5721d655b4dd12f
 
 jobs:
   semilla:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
-      - name: Esperar datos frescos y completos en Render
-        id: esperar
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias del backend
+        run: npm ci
+        working-directory: backend
+
+      - name: Recolectar de SEACE (solo lo que falta)
+        id: recolectar
+        working-directory: backend
+        env:
+          SEACE_DB_PATH: ${{ runner.temp }}/seace.db
         run: |
-          if python3 .github/scripts/esperar_sync.py "$URL_BASE"; then
+          if node scripts/recolectar.mjs "$GITHUB_WORKSPACE/semilla.json.gz"; then
             echo "listo=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::Render no tuvo datos frescos y completos a tiempo; no se publica semilla esta vez."
+            echo "::warning::SEACE no entregó datos frescos y completos esta vez; no se publica semilla ni se avisa."
             echo "listo=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Descargar y validar la semilla
+      - name: Validar la semilla
         id: validar
-        if: steps.esperar.outputs.listo == 'true'
+        if: steps.recolectar.outputs.listo == 'true'
         run: |
-          curl -fsS --retry 3 --retry-delay 10 -m 180 -o semilla.json.gz "$URL_BASE/api/export"
           if python3 .github/scripts/validar_semilla.py semilla.json.gz; then
             echo "valida=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::warning::La semilla descargada no pasó la validación; se conserva la anterior."
+            echo "::warning::La semilla no pasó la validación; se conserva la anterior."
             echo "valida=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -64,3 +80,19 @@ jobs:
           git commit -q -m "Semilla de datos $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
           echo "Semilla publicada en la rama data."
+
+      # Un fallo de Notion no debe impedir que la semilla se publique (ya se hizo arriba).
+      - name: Avisar en Notion
+        if: steps.validar.outputs.valida == 'true'
+        continue-on-error: true
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          AVISO_TIPOS: ${{ vars.AVISO_TIPOS }}
+          AVISO_CIUDADES: ${{ vars.AVISO_CIUDADES }}
+          AVISO_PALABRAS: ${{ vars.AVISO_PALABRAS }}
+        run: |
+          if [ -z "$NOTION_TOKEN" ]; then
+            echo "::notice::No hay secreto NOTION_TOKEN; se omite el aviso a Notion."
+            exit 0
+          fi
+          python3 .github/scripts/avisar_notion.py semilla.json.gz
