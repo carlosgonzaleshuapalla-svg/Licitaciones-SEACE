@@ -252,7 +252,8 @@ def main(argv):
         print("La semilla no tiene el formato esperado; no se hace nada.")
         return 1
 
-    tipos = [t for t in lista_env(os.environ.get("AVISO_TIPOS", "Bien")) if t in TIPOS_VALIDOS]
+    # GitHub entrega las variables no creadas como texto vacío, no como ausentes.
+    tipos = [t for t in lista_env(os.environ.get("AVISO_TIPOS") or "Bien") if t in TIPOS_VALIDOS]
     if not tipos:
         print("AVISO_TIPOS no tiene ningún valor válido (Bien o Servicio).")
         return 1

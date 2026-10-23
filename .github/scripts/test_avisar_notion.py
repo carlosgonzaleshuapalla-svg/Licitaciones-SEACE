@@ -46,6 +46,20 @@ class Puras(unittest.TestCase):
         self.assertLessEqual(len(largo["Descripción"]["title"][0]["text"]["content"]), 2000)
 
 
+class Entorno(unittest.TestCase):
+    def test_variables_vacias_usan_los_valores_por_defecto(self):
+        """GitHub pasa las variables sin crear como "" y el script debe tratarlas como ausentes."""
+        import gzip, json, os, subprocess, sys, tempfile
+        with tempfile.TemporaryDirectory() as d:
+            ruta = os.path.join(d, "s.json.gz")
+            with gzip.open(ruta, "wt") as f:
+                json.dump({"version": 1, "tenders": [lic(1)]}, f)
+            env = {**os.environ, "AVISO_TIPOS": "", "AVISO_CIUDADES": "", "AVISO_PALABRAS": "", "AVISO_MAX_NUEVAS": ""}
+            r = subprocess.run([sys.executable, a.__file__, ruta, "--dry-run"], env=env, capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("tipos=['Bien']", r.stdout)
+
+
 class Plan(unittest.TestCase):
     def test_plan(self):
         semilla = {"tenders": [
