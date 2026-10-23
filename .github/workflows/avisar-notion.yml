@@ -1,0 +1,56 @@
+name: Avisar en Notion
+
+# Lee la semilla que publica la Mac (rama `data`) y agrega a Notion las
+# licitaciones nuevas. No consulta a SEACE (bloquea las IPs de GitHub): solo lee
+# un archivo del propio repo, así que corre en segundos y puede repetirse cada
+# hora sin costo. Recorre dos veces lo mismo sin duplicar: reconoce lo ya
+# creado por "ID SEACE".
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: notion
+  cancel-in-progress: false
+
+env:
+  # Base de Notion "Licitaciones ≤ 8 UIT (SEACE)". El token va en el secreto NOTION_TOKEN.
+  NOTION_DATABASE_ID: 043dc7ff539a49f4a5721d655b4dd12f
+
+jobs:
+  avisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Descargar y validar la semilla
+        id: semilla
+        run: |
+          curl -fsS --retry 3 --retry-delay 10 -m 120 -o semilla.json.gz \
+            "https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/data/seed.json.gz"
+          if python3 .github/scripts/validar_semilla.py semilla.json.gz; then
+            echo "valida=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::La semilla no pasó la validación; no se avisa."
+            echo "valida=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Avisar en Notion
+        if: steps.semilla.outputs.valida == 'true'
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          AVISO_TIPOS: ${{ vars.AVISO_TIPOS }}
+          AVISO_CIUDADES: ${{ vars.AVISO_CIUDADES }}
+          AVISO_PALABRAS: ${{ vars.AVISO_PALABRAS }}
+        run: |
+          if [ -z "$NOTION_TOKEN" ]; then
+            echo "::error::Falta el secreto NOTION_TOKEN."
+            exit 1
+          fi
+          python3 .github/scripts/avisar_notion.py semilla.json.gz
