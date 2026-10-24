@@ -20,7 +20,7 @@
  * contratación tiene un único ítem.
  */
 import { db } from './db.js';
-import { SeaceBloqueadoError } from './seaceClient.js';
+import { SeaceBloqueadoError, ESTADO_CULMINADO } from './seaceClient.js';
 import { ordenableDeSeace, ahoraLimaOrdenable } from './fechas.js';
 
 db.exec(`
@@ -55,7 +55,30 @@ db.exec(`
     capturado_en           TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_resultados_resultado ON resultados_adjudicacion(resultado);
+
+  -- Pequeño almacén de estado para el historial (pausas por bloqueo, avance del histórico).
+  CREATE TABLE IF NOT EXISTS resultados_meta (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+  );
 `);
+
+const metaLeer = db.prepare(`SELECT valor FROM resultados_meta WHERE clave = ?`);
+const metaEscribir = db.prepare(`INSERT INTO resultados_meta (clave, valor) VALUES (?, ?) ON CONFLICT(clave) DO UPDATE SET valor = excluded.valor`);
+export const meta = {
+  leer: (clave) => metaLeer.get(clave)?.valor ?? null,
+  escribir: (clave, valor) => metaEscribir.run(clave, String(valor)),
+};
+
+/** Horas de pausa de TODO el historial tras un rechazo (403/429) del SEACE. */
+export const HORAS_PAUSA_TRAS_BLOQUEO = 6;
+export function enPausa(ahora = new Date()) {
+  const hasta = Number(meta.leer('pausa_hasta') ?? 0);
+  return hasta > ahora.getTime() ? new Date(hasta) : null;
+}
+function iniciarPausa(ahora = new Date()) {
+  meta.escribir('pausa_hasta', ahora.getTime() + HORAS_PAUSA_TRAS_BLOQUEO * 3600 * 1000);
+}
 
 // Contrataciones que ya estaban en la base antes de existir este historial.
 db.exec(`
@@ -145,14 +168,14 @@ const sumarIntento = db.prepare(`UPDATE seguimiento_resultado SET intentos = int
 export const MAX_INTENTOS = 20;
 export const DIAS_PARA_ABANDONAR = 30;
 
-/** Contrataciones cuyo plazo ya venció (con margen) y aún no tienen resultado. Las más antiguas primero. */
+/** Contrataciones cuyo plazo ya venció (con margen) y aún no tienen resultado. Las más recientes primero. */
 export function pendientesDeResultado({ ahora = new Date(), margenMin = 60, limite = 40 } = {}) {
   const corte = ahoraLimaOrdenable(new Date(ahora.getTime() - margenMin * 60 * 1000));
   const filas = db.prepare(`SELECT * FROM seguimiento_resultado WHERE estado = 0`).all();
   return filas
     .map((f) => ({ ...f, _fin: ordenableDeSeace(f.cotizacion_fin) }))
     .filter((f) => f._fin !== null && f._fin <= corte)
-    .sort((a, b) => (a._fin < b._fin ? -1 : 1))
+    .sort((a, b) => (a._fin < b._fin ? 1 : -1)) // lo más reciente primero: es lo más útil para calibrar
     .slice(0, limite);
 }
 
@@ -163,7 +186,11 @@ export function pendientesDeResultado({ ahora = new Date(), margenMin = 60, limi
  * pendiente para la próxima corrida (reintentar solo alargaría el bloqueo).
  */
 export async function capturarResultados({ client, log = console.log, ahora = new Date(), limite = Number(process.env.SEACE_RESULTADOS_LIMITE) || 40, margenMin = 60 } = {}) {
-  const hoy = ahoraLimaOrdenable(ahora);
+  const pausa = enPausa(ahora);
+  if (pausa) {
+    log(`Resultados: en pausa por un rechazo anterior del SEACE, hasta ${pausa.toISOString()}.`);
+    return { capturados: 0, sinResultado: 0, abandonados: 0, bloqueado: false, revisados: 0, enPausa: true };
+  }
   const limiteAbandono = ahoraLimaOrdenable(new Date(ahora.getTime() - DIAS_PARA_ABANDONAR * 86400 * 1000));
   let capturados = 0;
   let abandonados = 0;
@@ -187,7 +214,8 @@ export async function capturarResultados({ client, log = console.log, ahora = ne
     } catch (err) {
       if (err instanceof SeaceBloqueadoError) {
         bloqueado = true;
-        log(`Resultados: SEACE limitó el ritmo (HTTP ${err.status}); se detiene y el resto queda para la próxima corrida.`);
+        iniciarPausa(ahora);
+        log(`Resultados: SEACE limitó el ritmo (HTTP ${err.status}); se detiene y todo el historial descansa ${HORAS_PAUSA_TRAS_BLOQUEO} h.`);
         break;
       }
       sumarIntento.run(new Date().toISOString(), seg.id_contrato);
@@ -209,4 +237,74 @@ export function resumenResultados() {
     mixtos: q(`SELECT COUNT(*) n FROM resultados_adjudicacion WHERE resultado = 'MIXTO'`).n,
     pendientes: q(`SELECT COUNT(*) n FROM seguimiento_resultado WHERE estado = 0`).n,
   };
+}
+
+
+const insertarSeguimientoSiFalta = db.prepare(`
+  INSERT OR IGNORE INTO seguimiento_resultado (id_contrato, codigo, entidad, objeto, descripcion, cotizacion_fin, visto_en)
+  VALUES (?, ?, ?, ?, ?, ?, ?)
+`);
+
+// SEACE_HISTORICO_DIAS=0 apaga el histórico (interruptor de emergencia); sin definir: 90 días.
+export const DIAS_HISTORICO = process.env.SEACE_HISTORICO_DIAS === '0' ? 0 : Number(process.env.SEACE_HISTORICO_DIAS) || 90;
+export const PAGINAS_HISTORICO_POR_CORRIDA = Number(process.env.SEACE_HISTORICO_PAGINAS) || 20;
+const TAM_PAGINA = 50;
+
+/**
+ * Anota las contrataciones de BIENES ya cerradas de los últimos `dias` días para que
+ * `capturarResultados` les baje el resultado poco a poco. Avanza como máximo
+ * `paginas` páginas del buscador por corrida y recuerda dónde se quedó. Ante un
+ * 403/429 se detiene SIN reintentar y todo el historial descansa 6 h.
+ */
+export async function prepararHistorico({ client, log = console.log, ahora = new Date(), dias = DIAS_HISTORICO, paginas = PAGINAS_HISTORICO_POR_CORRIDA } = {}) {
+  if (!(dias > 0)) return { completo: false, anotados: 0, paginas: 0, apagado: true };
+  if (meta.leer('historico_completo') === '1' && meta.leer('historico_dias') === String(dias)) return { completo: true, anotados: 0, paginas: 0 };
+  const pausa = enPausa(ahora);
+  if (pausa) {
+    log(`Histórico: en pausa por un rechazo anterior del SEACE, hasta ${pausa.toISOString()}.`);
+    return { completo: false, anotados: 0, paginas: 0, enPausa: true };
+  }
+  if (meta.leer('historico_dias') !== String(dias)) {
+    meta.escribir('historico_dias', dias);
+    meta.escribir('historico_pagina', 1);
+    meta.escribir('historico_completo', 0);
+  }
+  const corte = ahoraLimaOrdenable(new Date(ahora.getTime() - dias * 86400 * 1000));
+  let pagina = Number(meta.leer('historico_pagina') ?? 1);
+  let anotados = 0;
+  let leidas = 0;
+  let completo = false;
+  while (leidas < paginas) {
+    let r;
+    try {
+      r = await client.buscarPagina({ page: pagina, pageSize: TAM_PAGINA, objetos: [1], estados: [ESTADO_CULMINADO] });
+    } catch (err) {
+      if (err instanceof SeaceBloqueadoError) {
+        iniciarPausa(ahora);
+        log(`Histórico: SEACE limitó el ritmo (HTTP ${err.status}) en la página ${pagina}; se detiene y descansa ${HORAS_PAUSA_TRAS_BLOQUEO} h.`);
+      } else {
+        log(`Histórico: error en la página ${pagina}: ${err.message}. Se retoma en la próxima corrida.`);
+      }
+      break;
+    }
+    const data = r?.data ?? [];
+    leidas++;
+    for (const rec of data) {
+      const pub = ordenableDeSeace(rec.fecPublica);
+      if (pub !== null && pub < corte) continue; // fuera de la ventana
+      if (!rec.idContrato) continue;
+      const res = insertarSeguimientoSiFalta.run(rec.idContrato, rec.desContratacion ?? null, rec.nomEntidad ?? null, rec.nomObjetoContrato ?? null, rec.desObjetoContrato ?? null, rec.fecFinCotizacion ?? null, new Date().toISOString());
+      anotados += res.changes;
+    }
+    const ultima = data.length ? ordenableDeSeace(data[data.length - 1].fecPublica) : null;
+    if (data.length === 0 || (ultima !== null && ultima < corte)) {
+      completo = true;
+      break;
+    }
+    pagina++;
+    meta.escribir('historico_pagina', pagina);
+  }
+  if (completo) meta.escribir('historico_completo', 1);
+  log(`Histórico (${dias} días): ${anotados} contratación(es) anotada(s) en ${leidas} página(s)${completo ? '; ventana completa' : `; sigue en la página ${pagina}`}.`);
+  return { completo, anotados, paginas: leidas };
 }

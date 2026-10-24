@@ -209,3 +209,9 @@ Hasta ahora el portal borraba lo que cerraba y se perdía quién ganó y a qué 
 - Consulta: `node backend/scripts/consultar-precios.mjs estante` (o `--csv`). La corrida de la Mac deja `~/Library/Application Support/licitaciones-seace/resultados-adjudicados.csv`.
 - Pruebas: `backend/test/resultados.test.js` (13 pruebas, sin red). El historial no se publica en GitHub: queda en la base de la Mac.
 
+### Histórico de los últimos meses y cuidado del SEACE (24/10/2026)
+- `prepararHistorico` (src/resultados.js): anota los BIENES ya cerrados (estado Culminado) de los últimos 90 días (`SEACE_HISTORICO_DIAS`; `0` lo apaga) leyendo el buscador de más reciente a más antiguo, **20 páginas por corrida** (`SEACE_HISTORICO_PAGINAS`) y recordando dónde se quedó (tabla `resultados_meta`). Luego `capturarResultados` baja el detalle de 150 por corrida, lo más reciente primero. Estimado: unas 6 000 contrataciones; se pone al día en 4 a 5 días de corridas cada 3 h (~170 pedidos por corrida, ~1 cada 2 s, unos 6 min).
+- Frenos para no ser bloqueados: ritmo base de 1 pedido cada 2 s con auto-ajuste (ya existente); tope de pedidos por corrida; solo corre si la sincronización principal terminó sin bloqueo; **ante el primer 403/429 se detiene sin reintentar y todo el historial descansa 6 h** (`resultados_meta.pausa_hasta`); un bloqueo del historial NO impide publicar la semilla; un error de red común no activa la pausa.
+- Interruptor de emergencia: `SEACE_HISTORICO_DIAS=0` en `tools/mac/actualizar-desde-mac.sh` apaga el histórico sin tocar lo demás.
+- Pruebas: `backend/test/resultados.test.js` (19 pruebas, sin red). Prueba real el 24/10/2026 sobre una copia de la base: 2 páginas (100 contrataciones anotadas) y 6 resultados guardados en 14 s, sin bloqueo.
+

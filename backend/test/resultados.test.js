@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { db } from '../src/db.js';
 import {
   registrarSeguimiento, mapDetalleAResultado, detalleResuelto, pendientesDeResultado,
-  capturarResultados, resumenResultados, MAX_INTENTOS,
+  capturarResultados, resumenResultados, MAX_INTENTOS, prepararHistorico, enPausa, meta, HORAS_PAUSA_TRAS_BLOQUEO,
 } from '../src/resultados.js';
 import { SeaceBloqueadoError } from '../src/seaceClient.js';
 
@@ -26,7 +26,7 @@ const desierto = (id) => ({
 });
 
 function limpiar() {
-  db.exec(`DELETE FROM seguimiento_resultado; DELETE FROM resultados_adjudicacion;`);
+  db.exec(`DELETE FROM seguimiento_resultado; DELETE FROM resultados_adjudicacion; DELETE FROM resultados_meta;`);
 }
 
 describe('mapeo del detalle', () => {
@@ -113,16 +113,24 @@ describe('captura de resultados', () => {
     assert.equal(r.abandonados, 1);
   });
 
-  test('un bloqueo de SEACE detiene la captura sin perder lo pendiente ni reintentar', async () => {
-    registrarSeguimiento(cab(941, '24/10/2026 09:00:00'));
-    registrarSeguimiento(cab(942, '25/10/2026 09:00:00'));
+  test('un bloqueo de SEACE detiene la captura, no reintenta y pausa el historial', async () => {
+    registrarSeguimiento(cab(941, '25/10/2026 09:00:00'));
+    registrarSeguimiento(cab(942, '24/10/2026 09:00:00'));
     let llamadas = 0;
     const client = { listarCompleto: async (id) => { llamadas++; if (id === 942) throw new SeaceBloqueadoError(403, 'x'); return desierto(id); } };
     const r = await capturarResultados({ client, log: silencio, ahora: AHORA });
     assert.equal(r.bloqueado, true);
-    assert.equal(r.capturados, 1);
+    assert.equal(r.capturados, 1); // 941 (más reciente) se guardó antes del rechazo
     assert.equal(llamadas, 2);
     assert.equal(db.prepare(`SELECT estado FROM seguimiento_resultado WHERE id_contrato = 942`).get().estado, 0);
+    // pausa: la siguiente corrida ni siquiera pregunta
+    assert.ok(enPausa(AHORA));
+    llamadas = 0;
+    const r2 = await capturarResultados({ client, log: silencio, ahora: new Date(AHORA.getTime() + 3600 * 1000) });
+    assert.equal(r2.enPausa, true);
+    assert.equal(llamadas, 0);
+    // pasadas las horas de pausa se reanuda
+    assert.equal(enPausa(new Date(AHORA.getTime() + (HORAS_PAUSA_TRAS_BLOQUEO + 1) * 3600 * 1000)), null);
   });
 
   test('un error común en un contrato no frena a los demás', async () => {
@@ -136,6 +144,7 @@ describe('captura de resultados', () => {
 
   test('respeta el límite por corrida', async () => {
     for (let i = 0; i < 5; i++) registrarSeguimiento(cab(960 + i, '24/10/2026 09:00:00'));
+    assert.equal(pendientesDeResultado({ ahora: AHORA, limite: 3 }).length, 3);
     const r = await capturarResultados({ client: { listarCompleto: async (id) => desierto(id) }, log: silencio, ahora: AHORA, limite: 3 });
     assert.equal(r.revisados, 3);
   });
@@ -146,5 +155,76 @@ describe('captura de resultados', () => {
     registrarSeguimiento(cab(970, '24/10/2026 09:00:00'));
     db.exec(`DELETE FROM tenders WHERE id_contrato = 970`); // lo que hace pruneTendersNotIn al cerrar
     assert.equal(db.prepare(`SELECT COUNT(*) n FROM seguimiento_resultado WHERE id_contrato = 970`).get().n, 1);
+  });
+});
+
+
+describe('histórico de los últimos meses', () => {
+  beforeEach(limpiar);
+  const rec = (id, pub) => ({ idContrato: id, desContratacion: `CM-${id}-H`, nomEntidad: 'E', nomObjetoContrato: 'Bien', desObjetoContrato: 'H', fecPublica: pub, fecFinCotizacion: pub });
+  function clienteHist(paginas, { bloquearEnPagina = null } = {}) {
+    const llamadas = [];
+    return { llamadas, buscarPagina: async (a) => { llamadas.push(a); if (a.page === bloquearEnPagina) throw new SeaceBloqueadoError(403, 'x'); return { data: paginas[a.page - 1] ?? [] }; } };
+  }
+
+  test('pide solo Bienes culminados, anota lo que está dentro de la ventana y se detiene al pasar el corte', async () => {
+    const c = clienteHist([
+      [rec(1, '24/10/2026 10:00:00'), rec(2, '20/10/2026 10:00:00')],
+      [rec(3, '10/09/2026 10:00:00'), rec(4, '01/05/2026 10:00:00')], // la segunda ya pasó los 90 días
+      [rec(5, '01/04/2026 10:00:00')],
+    ]);
+    const r = await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90 });
+    assert.equal(r.completo, true);
+    assert.equal(c.llamadas.length, 2); // no pidió la tercera página
+    assert.deepEqual(c.llamadas[0].objetos, [1]);
+    assert.deepEqual(c.llamadas[0].estados, [4]);
+    const ids = db.prepare(`SELECT id_contrato FROM seguimiento_resultado ORDER BY id_contrato`).all().map((x) => x.id_contrato);
+    assert.deepEqual(ids, [1, 2, 3]);
+    // una vez completo no vuelve a pedir nada
+    const c2 = clienteHist([]);
+    await prepararHistorico({ client: c2, log: silencio, ahora: AHORA, dias: 90 });
+    assert.equal(c2.llamadas.length, 0);
+  });
+
+  test('avanza solo `paginas` por corrida y retoma donde se quedó', async () => {
+    const pags = Array.from({ length: 6 }, (_, i) => [rec(100 + i, '20/10/2026 10:00:00')]);
+    const c = clienteHist(pags);
+    await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90, paginas: 2 });
+    assert.deepEqual(c.llamadas.map((x) => x.page), [1, 2]);
+    await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90, paginas: 2 });
+    assert.deepEqual(c.llamadas.map((x) => x.page), [1, 2, 3, 4]);
+  });
+
+  test('ante un 403 se detiene sin reintentar y descansa; no se repite el pedido en las horas siguientes', async () => {
+    const c = clienteHist([[rec(200, '20/10/2026 10:00:00')], [rec(201, '20/10/2026 10:00:00')]], { bloquearEnPagina: 2 });
+    await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90 });
+    assert.deepEqual(c.llamadas.map((x) => x.page), [1, 2]);
+    assert.ok(enPausa(AHORA));
+    const n = c.llamadas.length;
+    await prepararHistorico({ client: c, log: silencio, ahora: new Date(AHORA.getTime() + 2 * 3600 * 1000), dias: 90 });
+    assert.equal(c.llamadas.length, n);
+    assert.equal(Number(meta.leer('historico_pagina')), 2); // retomará en la página 2
+  });
+
+  test('con 0 días el histórico está apagado y no pide nada', async () => {
+    const c = clienteHist([[rec(1, '24/10/2026 10:00:00')]]);
+    const r = await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 0 });
+    assert.equal(r.apagado, true);
+    assert.equal(c.llamadas.length, 0);
+  });
+
+  test('un error de red común no activa la pausa', async () => {
+    const c = { buscarPagina: async () => { throw new Error('red'); } };
+    await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90 });
+    assert.equal(enPausa(AHORA), null);
+  });
+
+  test('las contrataciones ya anotadas no se duplican ni pisan su estado', async () => {
+    registrarSeguimiento(cab(300, '20/10/2026 10:00:00'));
+    db.prepare(`UPDATE seguimiento_resultado SET intentos = 7 WHERE id_contrato = 300`).run();
+    const c = clienteHist([[rec(300, '20/10/2026 10:00:00')]]);
+    await prepararHistorico({ client: c, log: silencio, ahora: AHORA, dias: 90 });
+    assert.equal(db.prepare(`SELECT COUNT(*) n FROM seguimiento_resultado WHERE id_contrato = 300`).get().n, 1);
+    assert.equal(db.prepare(`SELECT intentos FROM seguimiento_resultado WHERE id_contrato = 300`).get().intentos, 7);
   });
 });

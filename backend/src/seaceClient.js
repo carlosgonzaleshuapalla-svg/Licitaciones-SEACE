@@ -38,6 +38,7 @@ const ANIO_FIJO = 2024; // la SPA oficial usa este valor fijo, no filtra por añ
 // alcance del portal (no son del tipo "puedo cotizar/comprar rápido").
 const CODIGOS_OBJETO_SINCRONIZADOS = [1, 2];
 const ESTADO_VIGENTE = 2;
+export const ESTADO_CULMINADO = 4;
 
 /** SEACE rechazó la petición por exceso de tráfico (HTTP 403 o 429). */
 export class SeaceBloqueadoError extends Error {
@@ -125,10 +126,10 @@ export function crearClienteSeace({
     intervaloActualMs: () => intervaloActual,
 
     /** Trae una página del buscador de contrataciones (Bien+Servicio, Vigente). */
-    buscarPagina({ page, pageSize }) {
+    buscarPagina({ page, pageSize, objetos = CODIGOS_OBJETO_SINCRONIZADOS, estados = [ESTADO_VIGENTE] }) {
       const url =
         `${BASE_URL}/buscador?anio=${ANIO_FIJO}&palabra_clave=&orden=2` +
-        `&lista_codigo_objeto=${CODIGOS_OBJETO_SINCRONIZADOS.join(',')}&lista_estado_contrato=${ESTADO_VIGENTE}` +
+        `&lista_codigo_objeto=${objetos.join(',')}&lista_estado_contrato=${estados.join(',')}` +
         `&page=${page}&page_size=${pageSize}`;
       return fetchJsonConReintento(url);
     },

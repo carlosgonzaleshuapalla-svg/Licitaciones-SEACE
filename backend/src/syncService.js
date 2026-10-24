@@ -8,7 +8,7 @@ import {
   filtrarPendientesDetalle,
   contarEstadoDatos,
 } from './db.js';
-import { registrarSeguimiento, capturarResultados } from './resultados.js';
+import { registrarSeguimiento, capturarResultados, prepararHistorico } from './resultados.js';
 
 const PAGE_SIZE = 50;
 // El ritmo real hacia SEACE lo limita el propio cliente (ver seaceClient.js);
@@ -315,10 +315,11 @@ export async function runSync({
 
     // Historial de precios adjudicados: baja el resultado de lo que ya cerró.
     // Va después de lo principal y nunca lo estropea (si falla, solo se anota).
-    if (!bloqueado && client.listarCompleto) {
+    if (!bloqueado && client.listarCompleto && client.buscarPagina) {
       try {
         // Un bloqueo aquí NO cuenta como bloqueo de la corrida: la lista y los
         // detalles ya están completos y la semilla se debe publicar igual.
+        await prepararHistorico({ client, log });
         await capturarResultados({ client, log });
       } catch (err) {
         log(`Resultados: falló de forma inesperada: ${err.message}`);
