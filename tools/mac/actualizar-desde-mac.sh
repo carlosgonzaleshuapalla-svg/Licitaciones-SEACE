@@ -36,10 +36,14 @@ trap 'rm -rf "$TMP"; rmdir "$DATOS/lock" 2>/dev/null' EXIT
 cd "$REPO_DIR/backend" || exit 1
 [ -d node_modules ] || npm ci --silent || exit 1
 
-if ! SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/recolectar.mjs "$TMP/semilla.json.gz"; then
+# Hasta 150 resultados por corrida (a 1 pedido cada 2 s son ~5 min): alcanza para ponerse al día.
+if ! SEACE_RESULTADOS_LIMITE=150 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/recolectar.mjs "$TMP/semilla.json.gz"; then
   echo "SEACE no entregó datos frescos y completos; no se publica."
   exit 3
 fi
+# Historial de precios adjudicados (solo local, no se publica): copia legible en Excel.
+SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/consultar-precios.mjs --csv "$DATOS/resultados-adjudicados.csv" || echo "No se pudo escribir el CSV de precios."
+
 python3 -I "$REPO_DIR/.github/scripts/validar_semilla.py" "$TMP/semilla.json.gz" || { echo "Semilla inválida; no se publica."; exit 4; }
 
 # Un solo commit sin historial, igual que antes.

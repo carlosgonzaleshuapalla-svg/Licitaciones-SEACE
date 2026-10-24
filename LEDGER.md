@@ -200,3 +200,12 @@ Diseño:
 Generar una semilla a mano (p. ej. la primera):
 `SEACE_DB_PATH=/ruta/base.db npm run semilla:exportar -- salida.json.gz`
 (se niega si <97 % tiene detalle; `--forzar` para saltarlo).
+
+## Historial de precios adjudicados (24/10/2026)
+Hasta ahora el portal borraba lo que cerraba y se perdía quién ganó y a qué precio. Ahora:
+- `src/resultados.js`: tablas `seguimiento_resultado` (cada contratación vista mientras estaba abierta; sin clave foránea, sobrevive a la limpieza) y `resultados_adjudicacion`.
+- Después de cada sincronización (`syncService.js`), baja de `listar-completo` el resultado de lo que ya cerró (plazo vencido hace más de 1 h): hasta 40 pedidos por corrida (150 en la corrida de la Mac, variable `SEACE_RESULTADOS_LIMITE`), al ritmo normal del cliente; ante un 403 se detiene sin pausar ni reintentar y NO bloquea la publicación de la semilla. Se abandona tras 20 intentos o 30 días sin resultado.
+- Qué publica SEACE (medido en 10 contrataciones cerradas el 24/10/2026): por ítem `nomEstadoCotiza` = ADJUDICADO o DESIERTO y, si se adjudicó, `codRuc`, `nomRazonSocial` y `precioTotal`. El `precioTotal` es el TOTAL de la cotización ganadora y se repite en cada ítem que cubre. **No publica las cotizaciones perdedoras.** El precio unitario solo se deduce si la contratación tiene un solo ítem. En esa muestra 7 de 10 salieron desiertas.
+- Consulta: `node backend/scripts/consultar-precios.mjs estante` (o `--csv`). La corrida de la Mac deja `~/Library/Application Support/licitaciones-seace/resultados-adjudicados.csv`.
+- Pruebas: `backend/test/resultados.test.js` (13 pruebas, sin red). El historial no se publica en GitHub: queda en la base de la Mac.
+

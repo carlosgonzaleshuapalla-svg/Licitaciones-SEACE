@@ -8,6 +8,7 @@ import {
   filtrarPendientesDetalle,
   contarEstadoDatos,
 } from './db.js';
+import { registrarSeguimiento, capturarResultados } from './resultados.js';
 
 const PAGE_SIZE = 50;
 // El ritmo real hacia SEACE lo limita el propio cliente (ver seaceClient.js);
@@ -281,7 +282,9 @@ export async function runSync({
 
     for (const record of registros) {
       if (!record?.idContrato) continue;
-      upsertTenderHeader(mapListRecordToTenderHeader(record));
+      const cabecera = mapListRecordToTenderHeader(record);
+      upsertTenderHeader(cabecera);
+      registrarSeguimiento(cabecera); // para guardar luego quién ganó y a qué precio
     }
 
     const idsContrato = registros.map((r) => r.idContrato).filter(Boolean);
@@ -308,6 +311,18 @@ export async function runSync({
       }
     } else {
       log('Lista incompleta: se omite la limpieza de contratos vencidos en esta corrida.');
+    }
+
+    // Historial de precios adjudicados: baja el resultado de lo que ya cerró.
+    // Va después de lo principal y nunca lo estropea (si falla, solo se anota).
+    if (!bloqueado && client.listarCompleto) {
+      try {
+        // Un bloqueo aquí NO cuenta como bloqueo de la corrida: la lista y los
+        // detalles ya están completos y la semilla se debe publicar igual.
+        await capturarResultados({ client, log });
+      } catch (err) {
+        log(`Resultados: falló de forma inesperada: ${err.message}`);
+      }
     }
 
     if (bloqueado) {
