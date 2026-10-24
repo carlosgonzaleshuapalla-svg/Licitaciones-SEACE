@@ -67,13 +67,17 @@ class Plan(unittest.TestCase):
             lic(4, fin="01/10/2026 10:00:00"),          # ya venció
             lic(5, pub="22/10/2026 09:00:00"),
         ]}
-        filas = {2: {"page_id": "p2", "vencida": False},    # ya está en Notion, sigue vigente
-                 9: {"page_id": "p9", "vencida": False},    # salió de la lista -> vencida
-                 4: {"page_id": "p4", "vencida": True}}     # ya marcada, no se repite
-        nuevas, pendientes, vencer = a.planificar(semilla, filas, ["Bien"], [], [], AHORA, 300)
+        filas = {2: {"page_id": "p2", "vencida": False, "seguimiento": "Nueva"},       # sigue vigente: no se toca
+                 9: {"page_id": "p9", "vencida": False, "seguimiento": "Cotizando"},   # salió de la lista, con seguimiento -> solo vencida
+                 4: {"page_id": "p4", "vencida": True, "seguimiento": "Cotizada"},     # ya marcada, no se repite
+                 8: {"page_id": "p8", "vencida": False, "seguimiento": "Nueva"},       # salió y nadie la tocó -> papelera
+                 7: {"page_id": "p7", "vencida": True, "seguimiento": "Nueva"},        # marcada antes de existir la limpieza -> papelera
+                 6: {"page_id": "p6", "vencida": False, "seguimiento": "Descartada"}}  # descartada por ti -> se conserva
+        nuevas, pendientes, vencer, papelera = a.planificar(semilla, filas, ["Bien"], [], [], AHORA, 300)
         self.assertEqual([t["id"] for t in nuevas], [5, 1], "lo más reciente primero, sin duplicar ni traer vencidas")
-        self.assertEqual(vencer, ["p9"])
-        nuevas, pendientes, _ = a.planificar(semilla, filas, ["Bien"], [], [], AHORA, 1)
+        self.assertEqual(sorted(vencer), ["p6", "p9"])
+        self.assertEqual(sorted(papelera), ["p7", "p8"])
+        nuevas, pendientes, _, _ = a.planificar(semilla, filas, ["Bien"], [], [], AHORA, 1)
         self.assertEqual([t["id"] for t in nuevas], [5])
         self.assertEqual(pendientes, 1)
 
@@ -85,7 +89,10 @@ class Plan(unittest.TestCase):
             def llamar(self, metodo, ruta, cuerpo=None):
                 self.llamadas.append((metodo, ruta, cuerpo))
                 if ruta.endswith("/query"):
-                    return {"results": [{"id": "p9", "properties": {"ID SEACE": {"number": 9}, "Vencida": {"checkbox": False}}}], "has_more": False}
+                    return {"results": [
+                        {"id": "p9", "properties": {"ID SEACE": {"number": 9}, "Vencida": {"checkbox": False}, "Seguimiento": {"status": {"name": "Cotizando"}}}},
+                        {"id": "p8", "properties": {"ID SEACE": {"number": 8}, "Vencida": {"checkbox": False}, "Seguimiento": {"status": {"name": "Nueva"}}}},
+                    ], "has_more": False}
                 return {}
 
         http = Falso()
@@ -93,10 +100,12 @@ class Plan(unittest.TestCase):
         metodos = [(m, r) for m, r, _ in http.llamadas]
         self.assertEqual(metodos.count(("POST", "/pages")), 2)
         self.assertIn(("PATCH", "/pages/p9"), metodos)
+        self.assertIn(("PATCH", "/pages/p8"), metodos)
         creada = next(c for m, r, c in http.llamadas if r == "/pages")
         self.assertEqual(creada["parent"], {"database_id": "DB"})
-        parches = [c for m, r, c in http.llamadas if m == "PATCH"]
-        self.assertEqual(parches, [{"properties": {"Vencida": {"checkbox": True}}}], "al vencer solo se toca 'Vencida', nunca el seguimiento")
+        parches = {r: c for m, r, c in http.llamadas if m == "PATCH"}
+        self.assertEqual(parches["/pages/p9"], {"properties": {"Vencida": {"checkbox": True}}}, "con seguimiento solo se marca 'Vencida'")
+        self.assertEqual(parches["/pages/p8"], {"archived": True}, "sin seguimiento va a la papelera (recuperable), no se borra del todo")
 
 
 if __name__ == "__main__":

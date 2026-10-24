@@ -3,8 +3,12 @@
 Solo usa la biblioteca estándar. Lee la semilla ya descargada y validada por el
 workflow (no consulta a SEACE), se queda con las que siguen dentro de plazo y
 cumplen el filtro, y crea en Notion las que todavía no están (se reconocen por
-"ID SEACE"). Nunca toca las columnas de seguimiento de lo ya creado: solo marca
-"Vencida" cuando una licitación sale de la lista vigente.
+"ID SEACE"). Nunca modifica el seguimiento de lo ya creado. Cuando una licitación
+sale de la lista vigente (venció o SEACE la retiró):
+  - si sigue en "Nueva" (nadie le dio seguimiento) se manda a la papelera de
+    Notion, donde se puede recuperar durante 30 días;
+  - si ya tiene seguimiento (Cotizando, Cotizada, Descartada) se conserva y solo
+    se marca "Vencida".
 
 Uso:
   python3 avisar_notion.py semilla.json.gz            # modo real (necesita NOTION_TOKEN)
@@ -142,10 +146,14 @@ def propiedades_notion(tender):
     return props
 
 
-def planificar(semilla, filas_notion, tipos, ciudades, palabras, ahora, max_nuevas):
-    """Decide qué crear y qué marcar vencido. No hace red.
+SIN_SEGUIMIENTO = "Nueva"
 
-    filas_notion: {id_seace: {"page_id": str, "vencida": bool}}
+
+def planificar(semilla, filas_notion, tipos, ciudades, palabras, ahora, max_nuevas):
+    """Decide qué crear, qué marcar vencido y qué mandar a la papelera. No hace red.
+
+    filas_notion: {id_seace: {"page_id": str, "vencida": bool, "seguimiento": str|None}}
+    Devuelve (nuevas, pendientes_por_tope, a_marcar_vencidas, a_la_papelera).
     """
     abiertas = [t for t in semilla["tenders"] if esta_abierta(t.get("cotizacionFin"), ahora)]
     ids_abiertas = {t["id"] for t in abiertas}
@@ -153,8 +161,10 @@ def planificar(semilla, filas_notion, tipos, ciudades, palabras, ahora, max_nuev
     # lo más reciente primero: si hay tope, lo que queda para la próxima es lo más viejo
     candidatas.sort(key=lambda t: (fecha_seace(t.get("fechaPublicacion")) or datetime.min.replace(tzinfo=LIMA)), reverse=True)
     nuevas = candidatas[:max_nuevas]
-    vencer = [f["page_id"] for i, f in filas_notion.items() if not f["vencida"] and i not in ids_abiertas]
-    return nuevas, len(candidatas) - len(nuevas), vencer
+    fuera = {i: f for i, f in filas_notion.items() if i not in ids_abiertas}
+    papelera = [f["page_id"] for f in fuera.values() if f.get("seguimiento") == SIN_SEGUIMIENTO]
+    vencer = [f["page_id"] for f in fuera.values() if f.get("seguimiento") != SIN_SEGUIMIENTO and not f["vencida"]]
+    return nuevas, len(candidatas) - len(nuevas), vencer, papelera
 
 
 # ---------- Notion ----------
@@ -216,6 +226,7 @@ def leer_filas_notion(http, db_id):
             filas[int(id_seace)] = {
                 "page_id": p["id"],
                 "vencida": bool((props.get("Vencida") or {}).get("checkbox")),
+                "seguimiento": ((props.get("Seguimiento") or {}).get("status") or {}).get("name"),
             }
         if not r.get("has_more"):
             return filas
@@ -224,12 +235,17 @@ def leer_filas_notion(http, db_id):
 
 def ejecutar(semilla, http, db_id, tipos, ciudades, palabras, ahora, max_nuevas, dry_run=False):
     filas = {} if dry_run and http is None else leer_filas_notion(http, db_id)
-    nuevas, pendientes, vencer = planificar(semilla, filas, tipos, ciudades, palabras, ahora, max_nuevas)
-    print(f"En Notion: {len(filas)}. Nuevas a crear: {len(nuevas)} (quedan para la próxima: {pendientes}). A marcar vencidas: {len(vencer)}.")
+    nuevas, pendientes, vencer, papelera = planificar(semilla, filas, tipos, ciudades, palabras, ahora, max_nuevas)
+    print(
+        f"En Notion: {len(filas)}. Nuevas a crear: {len(nuevas)} (quedan para la próxima: {pendientes}). "
+        f"Vencidas sin seguimiento a la papelera: {len(papelera)}. Vencidas con seguimiento a marcar: {len(vencer)}."
+    )
     if dry_run:
         for t in nuevas[:10]:
             print(f"  + [{t.get('objeto')}] {recortar(t.get('descripcion'), 70)} | {', '.join(ciudades_de(t)) or 's/ciudad'} | hasta {t.get('cotizacionFin')}")
         return len(nuevas), len(vencer)
+    for page_id in papelera:
+        http.llamar("PATCH", f"/pages/{page_id}", {"archived": True})
     for i, t in enumerate(nuevas, 1):
         http.llamar("POST", "/pages", {"parent": {"database_id": db_id}, "properties": propiedades_notion(t)})
         if i % 50 == 0:
