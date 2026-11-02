@@ -15,6 +15,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import { rubroDeContratacion } from '../src/rubros.js';
 
 const args = process.argv.slice(2);
 const iCsv = args.indexOf('--csv');
@@ -50,8 +51,8 @@ function precioUnitario(r) {
 const csvCelda = (v) => (v == null ? '' : /[",\n;]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 
 if (csvRuta) {
-  const cab = ['id_contrato', 'codigo', 'entidad', 'cierre_cotizacion', 'resultado', 'n_items', 'ruc_adjudicado', 'razon_adjudicado', 'precio_total_adjudicado', 'precio_unitario_deducido', 'descripcion'];
-  const lineas = [cab.join(';')].concat(filas.map((r) => [r.id_contrato, r.codigo, r.entidad, r.cotizacion_fin, r.resultado, r.n_items, r.ruc_adjudicado, r.razon_adjudicado, r.precio_total_adjudicado, precioUnitario(r), r.descripcion].map(csvCelda).join(';')));
+  const cab = ['id_contrato', 'codigo', 'entidad', 'cierre_cotizacion', 'resultado', 'n_items', 'ruc_adjudicado', 'razon_adjudicado', 'precio_total_adjudicado', 'precio_unitario_deducido', 'descripcion', 'objeto', 'rubro'];  // objeto y rubro se agregaron AL FINAL (01/11/2026): el orden anterior no cambia
+  const lineas = [cab.join(';')].concat(filas.map((r) => [r.id_contrato, r.codigo, r.entidad, r.cotizacion_fin, r.resultado, r.n_items, r.ruc_adjudicado, r.razon_adjudicado, r.precio_total_adjudicado, precioUnitario(r), r.descripcion, r.objeto, rubroDeContratacion({ objeto: r.objeto, items: JSON.parse(r.items_json || '[]'), descripcion: r.descripcion }).rubro].map(csvCelda).join(';')));
   fs.writeFileSync(csvRuta, '﻿' + lineas.join('\n') + '\n', 'utf8');
   console.log(`CSV escrito en ${csvRuta}: ${filas.length} fila(s).`);
 }

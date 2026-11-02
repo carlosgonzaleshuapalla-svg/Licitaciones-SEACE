@@ -117,6 +117,7 @@ export function mapDetalleAResultado(idContrato, detalle, seguimiento = {}) {
     unidad: it.nomUnidadMedida ?? null,
     ciudad: it.nomDistrito ?? null,
     estado: it.nomEstadoCotiza ?? null,
+    cubso: it.codCubso ?? null, // código CUBSO de 16 dígitos (estilo UNSPSC); desde 01/11/2026
   }));
   const adjudicados = itemsRaw.filter((it) => String(it.nomEstadoCotiza ?? '').toUpperCase() === 'ADJUDICADO');
   // Cada cotización ganadora distinta = un par (RUC, precio total).
@@ -247,18 +248,26 @@ const insertarSeguimientoSiFalta = db.prepare(`
 
 // SEACE_HISTORICO_DIAS=0 apaga el histórico (interruptor de emergencia); sin definir: 90 días.
 export const DIAS_HISTORICO = process.env.SEACE_HISTORICO_DIAS === '0' ? 0 : Number(process.env.SEACE_HISTORICO_DIAS) || 90;
+// Páginas del buscador por corrida, en TOTAL (se reparten entre los objetos pendientes, Bienes primero).
 export const PAGINAS_HISTORICO_POR_CORRIDA = Number(process.env.SEACE_HISTORICO_PAGINAS) || 20;
+// Objetos del histórico: 1 = Bien, 2 = Servicio (SEACE_HISTORICO_OBJETOS="1" lo deja sólo en Bienes).
+export const OBJETOS_HISTORICO = (process.env.SEACE_HISTORICO_OBJETOS ?? '1,2').split(',').map((x) => Number(x.trim())).filter((x) => x === 1 || x === 2);
 const TAM_PAGINA = 50;
 
+// Cursores por objeto. Bienes conserva las claves originales (compatibles con bases ya en uso);
+// Servicios usa las mismas con sufijo _2.
+const claveCursor = (objeto, base) => (objeto === 1 ? base : `${base}_${objeto}`);
+
 /**
- * Anota las contrataciones de BIENES ya cerradas de los últimos `dias` días para que
- * `capturarResultados` les baje el resultado poco a poco. Avanza como máximo
- * `paginas` páginas del buscador por corrida y recuerda dónde se quedó. Ante un
- * 403/429 se detiene SIN reintentar y todo el historial descansa 6 h.
+ * Anota las contrataciones (Bienes y Servicios) ya cerradas de los últimos `dias` días para que
+ * `capturarResultados` les baje el resultado poco a poco. Avanza como máximo `paginas` páginas
+ * del buscador por corrida (en total, no por objeto) y recuerda dónde se quedó en cada objeto.
+ * Ante un 403/429 se detiene SIN reintentar y todo el historial descansa 6 h.
  */
-export async function prepararHistorico({ client, log = console.log, ahora = new Date(), dias = DIAS_HISTORICO, paginas = PAGINAS_HISTORICO_POR_CORRIDA } = {}) {
+export async function prepararHistorico({ client, log = console.log, ahora = new Date(), dias = DIAS_HISTORICO, paginas = PAGINAS_HISTORICO_POR_CORRIDA, objetos = OBJETOS_HISTORICO } = {}) {
   if (!(dias > 0)) return { completo: false, anotados: 0, paginas: 0, apagado: true };
-  if (meta.leer('historico_completo') === '1' && meta.leer('historico_dias') === String(dias)) return { completo: true, anotados: 0, paginas: 0 };
+  const todosCompletos = () => objetos.every((o) => meta.leer(claveCursor(o, 'historico_completo')) === '1');
+  if (meta.leer('historico_dias') === String(dias) && todosCompletos()) return { completo: true, anotados: 0, paginas: 0 };
   const pausa = enPausa(ahora);
   if (pausa) {
     log(`Histórico: en pausa por un rechazo anterior del SEACE, hasta ${pausa.toISOString()}.`);
@@ -266,45 +275,103 @@ export async function prepararHistorico({ client, log = console.log, ahora = new
   }
   if (meta.leer('historico_dias') !== String(dias)) {
     meta.escribir('historico_dias', dias);
-    meta.escribir('historico_pagina', 1);
-    meta.escribir('historico_completo', 0);
+    for (const o of [1, 2]) {
+      meta.escribir(claveCursor(o, 'historico_pagina'), 1);
+      meta.escribir(claveCursor(o, 'historico_completo'), 0);
+    }
   }
   const corte = ahoraLimaOrdenable(new Date(ahora.getTime() - dias * 86400 * 1000));
-  let pagina = Number(meta.leer('historico_pagina') ?? 1);
   let anotados = 0;
   let leidas = 0;
-  let completo = false;
-  while (leidas < paginas) {
-    let r;
+  let detenido = false;
+  const porObjeto = {};
+  for (const objeto of objetos) {
+    if (detenido || leidas >= paginas) break;
+    if (meta.leer(claveCursor(objeto, 'historico_completo')) === '1') continue;
+    let pagina = Number(meta.leer(claveCursor(objeto, 'historico_pagina')) ?? 1);
+    let completoObj = false;
+    let anotadosObj = 0;
+    let leidasObj = 0;
+    while (leidas < paginas) {
+      let r;
+      try {
+        r = await client.buscarPagina({ page: pagina, pageSize: TAM_PAGINA, objetos: [objeto], estados: [ESTADO_CULMINADO] });
+      } catch (err) {
+        if (err instanceof SeaceBloqueadoError) {
+          iniciarPausa(ahora);
+          log(`Histórico: SEACE limitó el ritmo (HTTP ${err.status}) en la página ${pagina} (objeto ${objeto}); se detiene y descansa ${HORAS_PAUSA_TRAS_BLOQUEO} h.`);
+        } else {
+          log(`Histórico: error en la página ${pagina} (objeto ${objeto}): ${err.message}. Se retoma en la próxima corrida.`);
+        }
+        detenido = true;
+        break;
+      }
+      const data = r?.data ?? [];
+      leidas++;
+      leidasObj++;
+      for (const rec of data) {
+        const pub = ordenableDeSeace(rec.fecPublica);
+        if (pub !== null && pub < corte) continue; // fuera de la ventana
+        if (!rec.idContrato) continue;
+        const res = insertarSeguimientoSiFalta.run(rec.idContrato, rec.desContratacion ?? null, rec.nomEntidad ?? null, rec.nomObjetoContrato ?? null, rec.desObjetoContrato ?? null, rec.fecFinCotizacion ?? null, new Date().toISOString());
+        anotados += res.changes;
+        anotadosObj += res.changes;
+      }
+      const ultima = data.length ? ordenableDeSeace(data[data.length - 1].fecPublica) : null;
+      if (data.length === 0 || (ultima !== null && ultima < corte)) {
+        completoObj = true;
+        break;
+      }
+      pagina++;
+      meta.escribir(claveCursor(objeto, 'historico_pagina'), pagina);
+    }
+    if (completoObj) meta.escribir(claveCursor(objeto, 'historico_completo'), 1);
+    porObjeto[objeto] = { anotados: anotadosObj, paginas: leidasObj, completo: completoObj, siguientePagina: pagina };
+    log(`Histórico (${dias} días, ${objeto === 1 ? 'Bienes' : 'Servicios'}): ${anotadosObj} contratación(es) anotada(s) en ${leidasObj} página(s)${completoObj ? '; ventana completa' : `; sigue en la página ${pagina}`}.`);
+  }
+  return { completo: todosCompletos(), anotados, paginas: leidas, porObjeto };
+}
+
+// SEACE_CUBSO_RELLENO = nº de resultados antiguos (sin código CUBSO) a re-consultar por corrida. 0 (por defecto) = apagado.
+export const CUBSO_RELLENO_POR_CORRIDA = Number(process.env.SEACE_CUBSO_RELLENO) || 0;
+
+/**
+ * Completa el código CUBSO (codCubso) de resultados guardados ANTES de que se guardara. Un pedido por
+ * contratación (al ritmo del cliente), lo más reciente primero, hasta `limite` por corrida; ante
+ * 403/429 se detiene sin reintentar y activa la misma pausa. Sólo toca `items_json`: nunca cambia
+ * resultado, ganador ni precio. Con `limite` 0 no hace nada.
+ */
+export async function rellenarCubso({ client, log = console.log, ahora = new Date(), limite = CUBSO_RELLENO_POR_CORRIDA } = {}) {
+  if (!(limite > 0)) return { rellenados: 0, apagado: true };
+  const pausa = enPausa(ahora);
+  if (pausa) return { rellenados: 0, enPausa: true };
+  const filas = db.prepare(`SELECT id_contrato, items_json FROM resultados_adjudicacion WHERE items_json NOT LIKE '%"cubso"%' ORDER BY id_contrato DESC LIMIT ?`).all(limite);
+  const actualizar = db.prepare(`UPDATE resultados_adjudicacion SET items_json = ? WHERE id_contrato = ?`);
+  let rellenados = 0;
+  let sinCoincidir = 0;
+  for (const f of filas) {
     try {
-      r = await client.buscarPagina({ page: pagina, pageSize: TAM_PAGINA, objetos: [1], estados: [ESTADO_CULMINADO] });
+      const detalle = await client.listarCompleto(f.id_contrato);
+      const nuevos = mapDetalleAResultado(f.id_contrato, detalle);
+      const viejos = JSON.parse(f.items_json);
+      const items = JSON.parse(nuevos.items_json);
+      // Sólo se acepta si el detalle coincide ítem por ítem (mismo orden y producto).
+      if (items.length === viejos.length && items.every((it, i) => it.producto === viejos[i].producto)) {
+        actualizar.run(JSON.stringify(viejos.map((v, i) => ({ ...v, cubso: items[i].cubso }))), f.id_contrato);
+        rellenados++;
+      } else {
+        sinCoincidir++;
+        actualizar.run(JSON.stringify(viejos.map((v) => ({ ...v, cubso: null }))), f.id_contrato); // evita reintentar para siempre
+      }
     } catch (err) {
       if (err instanceof SeaceBloqueadoError) {
         iniciarPausa(ahora);
-        log(`Histórico: SEACE limitó el ritmo (HTTP ${err.status}) en la página ${pagina}; se detiene y descansa ${HORAS_PAUSA_TRAS_BLOQUEO} h.`);
-      } else {
-        log(`Histórico: error en la página ${pagina}: ${err.message}. Se retoma en la próxima corrida.`);
+        log(`CUBSO: SEACE limitó el ritmo (HTTP ${err.status}); se detiene y el historial descansa ${HORAS_PAUSA_TRAS_BLOQUEO} h.`);
+        break;
       }
-      break;
+      log(`CUBSO: error con el contrato ${f.id_contrato}: ${err.message}`);
     }
-    const data = r?.data ?? [];
-    leidas++;
-    for (const rec of data) {
-      const pub = ordenableDeSeace(rec.fecPublica);
-      if (pub !== null && pub < corte) continue; // fuera de la ventana
-      if (!rec.idContrato) continue;
-      const res = insertarSeguimientoSiFalta.run(rec.idContrato, rec.desContratacion ?? null, rec.nomEntidad ?? null, rec.nomObjetoContrato ?? null, rec.desObjetoContrato ?? null, rec.fecFinCotizacion ?? null, new Date().toISOString());
-      anotados += res.changes;
-    }
-    const ultima = data.length ? ordenableDeSeace(data[data.length - 1].fecPublica) : null;
-    if (data.length === 0 || (ultima !== null && ultima < corte)) {
-      completo = true;
-      break;
-    }
-    pagina++;
-    meta.escribir('historico_pagina', pagina);
   }
-  if (completo) meta.escribir('historico_completo', 1);
-  log(`Histórico (${dias} días): ${anotados} contratación(es) anotada(s) en ${leidas} página(s)${completo ? '; ventana completa' : `; sigue en la página ${pagina}`}.`);
-  return { completo, anotados, paginas: leidas };
+  if (filas.length) log(`CUBSO: ${rellenados} relleno(s), ${sinCoincidir} sin coincidencia (de ${filas.length} revisados).`);
+  return { rellenados, sinCoincidir, revisados: filas.length };
 }

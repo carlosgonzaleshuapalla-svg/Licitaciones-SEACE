@@ -43,6 +43,8 @@ if ! SEACE_RESULTADOS_LIMITE=150 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts
 fi
 # Historial de precios adjudicados (solo local, no se publica): copia legible en Excel.
 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/consultar-precios.mjs --csv "$DATOS/resultados-adjudicados.csv" || echo "No se pudo escribir el CSV de precios."
+# Histórico con rubro y estadísticos (Bienes y Servicios) para el Excel y el modelo de precio (solo local, no se publica).
+SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/exportar-historico.mjs --salida "$DATOS/historico" || echo "No se pudo exportar el histórico por rubro."
 
 python3 -I "$REPO_DIR/.github/scripts/validar_semilla.py" "$TMP/semilla.json.gz" || { echo "Semilla inválida; no se publica."; exit 4; }
 

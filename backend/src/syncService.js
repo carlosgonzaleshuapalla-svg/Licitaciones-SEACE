@@ -8,7 +8,7 @@ import {
   filtrarPendientesDetalle,
   contarEstadoDatos,
 } from './db.js';
-import { registrarSeguimiento, capturarResultados, prepararHistorico } from './resultados.js';
+import { registrarSeguimiento, capturarResultados, prepararHistorico, rellenarCubso } from './resultados.js';
 
 const PAGE_SIZE = 50;
 // El ritmo real hacia SEACE lo limita el propio cliente (ver seaceClient.js);
@@ -321,6 +321,7 @@ export async function runSync({
         // detalles ya están completos y la semilla se debe publicar igual.
         await prepararHistorico({ client, log });
         await capturarResultados({ client, log });
+        await rellenarCubso({ client, log }); // 0 por defecto (SEACE_CUBSO_RELLENO): apagado salvo que se active
       } catch (err) {
         log(`Resultados: falló de forma inesperada: ${err.message}`);
       }
