@@ -197,6 +197,7 @@
 .tender-card-clickzone {
   all: unset;
   display: block;
+  box-sizing: border-box; /* `all: unset` lo anula y el relleno desbordaba la tarjeta */
   width: 100%;
   padding: 4px 16px 14px;
   text-align: left;
@@ -634,4 +635,182 @@
   font-size: 12.5px;
   color: var(--color-primary);
   cursor: pointer;
+}
+
+/* --- Filtros compactos: la lista tiene que verse sin bajar media pantalla --- */
+
+.filtros {
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.filtros-fila {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.filtros-fila .campo {
+  min-width: 0;
+}
+
+.filtros-fila .campo-busqueda {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .filtros-fila {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* En el celular lo primero es buscar; luego ciudad y tipo; el orden al final. */
+  .filtros-fila .campo-busqueda {
+    order: -1;
+  }
+
+  .filtros-fila .campo:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+.ayuda-detalle {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.ayuda-detalle summary {
+  cursor: pointer;
+  width: fit-content;
+}
+
+.ayuda-detalle p {
+  margin: 6px 0 0;
+  max-width: 640px;
+}
+
+.lista-resumen {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* --- Tarjeta: tipo, plazo y productos a la vista --- */
+
+.badge-servicio {
+  background: #f1ebfb;
+  color: #6b3fa0;
+}
+
+.badge-plazo-urgente {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.badge-plazo-pronto {
+  background: #fff4e0;
+  color: #9a5b00;
+}
+
+.badge-plazo-normal,
+.badge-plazo-vencida {
+  background: #eef0f3;
+  color: var(--color-text-muted);
+}
+
+.tender-productos {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.tender-productos {
+  min-width: 0;
+  text-align: left;
+}
+
+/* Un producto largo se recorta a 2 líneas con "…" en vez de salirse de la tarjeta. */
+.tender-productos li {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.tender-card-clickzone {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tender-productos strong {
+  color: var(--color-text);
+}
+
+.tender-productos-mas {
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+/* --- Cotización completa (un margen y un total para todos los productos) --- */
+
+.cotizacion-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-accent-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.cotizacion-resumen input[type="range"] {
+  width: 100%;
+}
+
+.cotizacion-nota {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.cotizacion-alerta {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.btn-copiar {
+  align-self: flex-start;
+  padding: 8px 14px;
+  border: 1px solid var(--color-primary);
+  border-radius: 6px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-copiar:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.btn-copiar:disabled {
+  opacity: 0.5;
+  cursor: default;
 }

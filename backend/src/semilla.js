@@ -18,7 +18,7 @@ import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { db, upsertTenderHeader, replaceTenderDetail, contarEstadoDatos } from './db.js';
+import { db, upsertTenderHeader, replaceTenderDetail, contarEstadoDatos, pruneTendersNotIn } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -233,4 +233,59 @@ export async function cargarSemillaSiVacia({
   }
   log('No hay semilla disponible: se sincroniza desde cero con SEACE.');
   return null;
+}
+
+// ---------- refresco mientras el servidor está despierto ----------
+
+// Una semilla con menos licitaciones que esto no se usa para reemplazar lo que
+// ya hay: sería una semilla rota, no un día tranquilo (la que publica la Mac ya
+// se valida con >= 100 antes de subirse; esto es la segunda barrera).
+const MIN_TENDERS_PARA_REEMPLAZAR = 50;
+const REFRESCO_CADA_MS = 30 * 60 * 1000;
+
+/**
+ * Relee la semilla publicada y, si es más nueva que la cargada, deja la base
+ * igual a ella: agrega lo nuevo y quita lo que ya no está vigente. Así un
+ * servidor que lleva horas despierto no se queda con datos viejos (la Mac
+ * publica una semilla nueva cada pocas horas). Nunca lanza.
+ */
+export async function refrescarDesdeSemilla({
+  log = console.log,
+  urls = [process.env.SEMILLA_URL === undefined ? SEMILLA_URL_POR_DEFECTO : process.env.SEMILLA_URL].filter(Boolean),
+  fetchImpl = (...a) => fetch(...a),
+  timeoutMs = 30_000,
+} = {}) {
+  for (const url of urls) {
+    try {
+      const res = await fetchImpl(url, { signal: AbortSignal.timeout(timeoutMs) });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const semilla = leerSemilla(Buffer.from(await res.arrayBuffer()));
+
+      const cargada = infoCarga?.generadaEn ?? null;
+      if (cargada && semilla.generadoEn && semilla.generadoEn <= cargada) return { actualizado: false, motivo: 'al-dia' };
+      if (semilla.tenders.length < MIN_TENDERS_PARA_REEMPLAZAR) {
+        log(`Semilla de ${url} descartada: solo trae ${semilla.tenders.length} licitaciones.`);
+        return { actualizado: false, motivo: 'muy-chica' };
+      }
+
+      const r = importarSemilla(semilla);
+      const ids = semilla.tenders.map((t) => t?.id).filter(Number.isSafeInteger);
+      const quitadas = pruneTendersNotIn(ids);
+      infoCarga = { origen: url, generadaEn: semilla.generadoEn ?? null, cargados: r.cargados, conDetalle: r.conDetalle };
+      log(`Semilla refrescada desde ${url}: ${r.cargados} licitaciones, ${quitadas} quitadas (generada ${semilla.generadoEn}).`);
+      return { actualizado: true, cargados: r.cargados, quitadas };
+    } catch (err) {
+      log(`No se pudo refrescar la semilla de ${url}: ${err.message}`);
+    }
+  }
+  return { actualizado: false, motivo: 'error' };
+}
+
+/** Repite refrescarDesdeSemilla cada 30 min sin mantener vivo el proceso. */
+export function iniciarRefrescoDeSemilla({ log = console.log, cadaMs = REFRESCO_CADA_MS, ...opciones } = {}) {
+  const timer = setInterval(() => {
+    refrescarDesdeSemilla({ log, ...opciones }).catch((err) => log(`Refresco de semilla falló: ${err.message}`));
+  }, cadaMs);
+  timer.unref?.();
+  return timer;
 }

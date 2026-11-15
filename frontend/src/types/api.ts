@@ -6,6 +6,13 @@ export interface Meta {
   estados: string[];
 }
 
+// Primeros productos de una licitación, para verlos en la lista sin abrir el detalle.
+export interface ProductoResumen {
+  producto: string;
+  cantidad: number | null;
+  unidadMedida: string | null;
+}
+
 export interface TenderSummary {
   idContrato: number | string;
   codigo: string;
@@ -19,6 +26,9 @@ export interface TenderSummary {
   ciudades: string[];
   cantidadItems: number;
   esProductoRapido: boolean;
+  // Solo vienen en la lista (no en el detalle, que trae todos los items).
+  productos?: ProductoResumen[];
+  productosTotal?: number;
 }
 
 export interface Proveedor {
@@ -59,7 +69,7 @@ export interface SyncResponse {
   // La sincronización corre en segundo plano: "iniciado" = ya arrancó.
   iniciado?: boolean;
   sincronizados?: number;
-  // Si no se pudo iniciar: "ya-en-curso" | "cooldown" | "bloqueado".
+  // Si no se pudo iniciar: "ya-en-curso" | "cooldown" | "bloqueado" | "desactivada".
   motivo?: string;
   proximoIntento?: string | null;
   timestamp: string;
@@ -77,11 +87,19 @@ export interface SyncStatus {
   total: number;
   conDetalle: number;
   pendientesDetalle: number;
+  // De dónde salen los datos: "semilla" = los renueva la Mac del gerente y el
+  // servidor solo los relee; "seace" = el servidor sincroniza él mismo.
+  fuente?: "semilla" | "seace";
+  // Desde cuándo son los datos que se están mostrando (ISO).
+  datosAl?: string | null;
 }
 
 // El portal solo sincroniza estos dos tipos de contratación (Obra y
 // Consultoría de Obra quedan fuera de alcance).
 export type ObjetoContrato = "Bien" | "Servicio";
+
+// "publicacion": lo más reciente primero. "cierre": lo que antes vence primero.
+export type OrdenLista = "publicacion" | "cierre";
 
 export interface TendersQuery {
   departamento?: string;
@@ -89,6 +107,7 @@ export interface TendersQuery {
   q?: string;
   objeto?: ObjetoContrato;
   ocultarVencidas?: boolean;
+  orden?: OrdenLista;
   page?: number;
   pageSize?: number;
 }

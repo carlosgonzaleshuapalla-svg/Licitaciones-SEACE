@@ -6,22 +6,26 @@ import { Paginacion } from "./components/Paginacion";
 import { SyncButton } from "./components/SyncButton";
 import { EstadoDatos } from "./components/EstadoDatos";
 import { TenderDetailPanel } from "./components/TenderDetailPanel";
+import { guardarPreferencias, leerPreferencias } from "./lib/preferencias";
+import { haceCuanto } from "./lib/plazo";
 import type { Meta, SyncStatus, TenderDetail, TenderSummary } from "./types/api";
 import "./App.css";
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 350;
 const STATUS_POLL_MS = 30_000;
+// El portal solo sincroniza licitaciones vigentes, así que el estado ya no es
+// un filtro que el usuario elija.
+const ESTADO_VIGENTE = "Vigente";
 
 function App() {
   const [meta, setMeta] = useState<Meta>({ departamentos: [], estados: [] });
 
-  const [filtros, setFiltros] = useState<FiltrosState>({
-    departamento: "",
-    estado: "Vigente",
+  // Ciudad, tipo y orden se recuerdan entre visitas; la búsqueda por texto no.
+  const [filtros, setFiltros] = useState<FiltrosState>(() => ({
+    ...leerPreferencias(),
     q: "",
-    objeto: "Bien",
-  });
+  }));
   const [qDebounced, setQDebounced] = useState("");
 
   const [page, setPage] = useState(1);
@@ -69,6 +73,26 @@ function App() {
     };
   }, [refrescarEstado]);
 
+  useEffect(() => {
+    guardarPreferencias({
+      departamento: filtros.departamento,
+      objeto: filtros.objeto,
+      orden: filtros.orden,
+    });
+  }, [filtros.departamento, filtros.objeto, filtros.orden]);
+
+  // Si la ciudad recordada ya no tiene licitaciones, se vuelve a "Todas" en vez
+  // de mostrar una lista vacía sin explicación.
+  useEffect(() => {
+    if (
+      filtros.departamento &&
+      meta.departamentos.length > 0 &&
+      !meta.departamentos.includes(filtros.departamento)
+    ) {
+      setFiltros((f) => ({ ...f, departamento: "" }));
+    }
+  }, [meta.departamentos, filtros.departamento]);
+
   // Debounce del texto libre de búsqueda.
   useEffect(() => {
     const t = setTimeout(() => setQDebounced(filtros.q), DEBOUNCE_MS);
@@ -78,12 +102,7 @@ function App() {
   // Volver a página 1 cuando cambian los filtros.
   useEffect(() => {
     setPage(1);
-  }, [
-    filtros.departamento,
-    filtros.estado,
-    filtros.objeto,
-    qDebounced,
-  ]);
+  }, [filtros.departamento, filtros.objeto, filtros.orden, qDebounced]);
 
   // Cargar lista de licitaciones.
   useEffect(() => {
@@ -93,9 +112,10 @@ function App() {
 
     getTenders({
       departamento: filtros.departamento || undefined,
-      estado: filtros.estado || undefined,
+      estado: ESTADO_VIGENTE,
       q: qDebounced || undefined,
       objeto: filtros.objeto || undefined,
+      orden: filtros.orden,
       // Siempre solo lo que aún se puede cotizar (el portal no es un histórico).
       ocultarVencidas: true,
       page,
@@ -123,8 +143,8 @@ function App() {
     };
   }, [
     filtros.departamento,
-    filtros.estado,
     filtros.objeto,
+    filtros.orden,
     qDebounced,
     page,
     refrescar,
@@ -162,6 +182,13 @@ function App() {
     };
   }, [seleccionadoId]);
 
+  const actualizarTodo = () => {
+    setRefrescar((r) => r + 1);
+    setRefrescarEstado((r) => r + 1);
+  };
+
+  const datosHace = haceCuanto(estado?.datosAl);
+
   return (
     <div className="app">
       <header className="app-header">
@@ -171,30 +198,39 @@ function App() {
             Contrataciones vigentes del Estado peruano, listas para cotizar
           </p>
         </div>
-        <SyncButton
-          onSincronizado={() => {
-            setRefrescar((r) => r + 1);
-            setRefrescarEstado((r) => r + 1);
-          }}
-        />
+        {/* Solo si el servidor sincroniza él mismo con SEACE tiene sentido pedir
+            una sincronización; si no, los datos los renueva la Mac y aquí solo
+            se vuelve a leer lo que ya hay. */}
+        {estado?.fuente === "seace" ? (
+          <SyncButton onSincronizado={actualizarTodo} />
+        ) : (
+          <div className="sync-button-wrap">
+            <button type="button" className="btn-sync" onClick={actualizarTodo}>
+              Actualizar
+            </button>
+            {datosHace && (
+              <span className="sync-mensaje">Datos de {datosHace}</span>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="app-main">
         <section className="panel-lista">
-          <EstadoDatos
-            estado={estado}
-            onActualizar={() => {
-              setRefrescar((r) => r + 1);
-              setRefrescarEstado((r) => r + 1);
-            }}
-          />
+          <EstadoDatos estado={estado} onActualizar={actualizarTodo} />
 
           <Filtros
             filtros={filtros}
             departamentos={meta.departamentos}
-            estados={meta.estados.length > 0 ? meta.estados : ["Vigente"]}
             onChange={setFiltros}
           />
+
+          {!cargandoLista && !errorLista && (
+            <p className="lista-resumen" role="status">
+              {total === 1 ? "1 licitación" : `${total} licitaciones`}
+              {filtros.orden === "cierre" ? " · cierran primero" : ""}
+            </p>
+          )}
 
           <TenderList
             tenders={tenders}

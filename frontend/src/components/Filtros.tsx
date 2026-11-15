@@ -1,28 +1,22 @@
 import type { ChangeEvent } from "react";
-import type { ObjetoContrato } from "../types/api";
+import type { ObjetoContrato, OrdenLista } from "../types/api";
 
 export interface FiltrosState {
   departamento: string;
-  estado: string;
   q: string;
   // "" = Bien y Servicio juntos (el portal no sincroniza Obra ni
   // Consultoría de Obra, así que estas son las únicas opciones reales).
   objeto: ObjetoContrato | "";
+  orden: OrdenLista;
 }
 
 interface FiltrosProps {
   filtros: FiltrosState;
   departamentos: string[];
-  estados: string[];
   onChange: (filtros: FiltrosState) => void;
 }
 
-export function Filtros({
-  filtros,
-  departamentos,
-  estados,
-  onChange,
-}: FiltrosProps) {
+export function Filtros({ filtros, departamentos, onChange }: FiltrosProps) {
   const actualizar = (cambios: Partial<FiltrosState>) => {
     onChange({ ...filtros, ...cambios });
   };
@@ -31,7 +25,7 @@ export function Filtros({
     <div className="filtros">
       <div className="filtros-fila">
         <div className="campo">
-          <label htmlFor="f-departamento">Ciudad / departamento</label>
+          <label htmlFor="f-departamento">Ciudad</label>
           <select
             id="f-departamento"
             value={filtros.departamento}
@@ -39,7 +33,7 @@ export function Filtros({
               actualizar({ departamento: e.target.value })
             }
           >
-            <option value="">Todos los departamentos</option>
+            <option value="">Todas</option>
             {departamentos.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -60,25 +54,22 @@ export function Filtros({
             }
           >
             <option value="">Bien y Servicio</option>
-            <option value="Bien">Solo Bien (producto físico)</option>
+            <option value="Bien">Solo Bien</option>
             <option value="Servicio">Solo Servicio</option>
           </select>
         </div>
 
         <div className="campo">
-          <label htmlFor="f-estado">Estado</label>
+          <label htmlFor="f-orden">Ordenar por</label>
           <select
-            id="f-estado"
-            value={filtros.estado}
+            id="f-orden"
+            value={filtros.orden}
             onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-              actualizar({ estado: e.target.value })
+              actualizar({ orden: e.target.value as FiltrosState["orden"] })
             }
           >
-            {estados.map((es) => (
-              <option key={es} value={es}>
-                {es}
-              </option>
-            ))}
+            <option value="publicacion">Más recientes</option>
+            <option value="cierre">Cierran primero</option>
           </select>
         </div>
 
@@ -87,7 +78,7 @@ export function Filtros({
           <input
             id="f-q"
             type="text"
-            placeholder="Descripción o entidad..."
+            placeholder="Producto, descripción o entidad..."
             value={filtros.q}
             onChange={(e: ChangeEvent<HTMLInputElement>) =>
               actualizar({ q: e.target.value })
@@ -96,19 +87,16 @@ export function Filtros({
         </div>
       </div>
 
-      <p className="ayuda ayuda-objeto">
-        "Bien" es compra de producto físico; "Servicio" es contratación de
-        una persona o empresa para realizar un trabajo. SEACE no publica un
-        plazo de entrega estructurado para ninguno de los dos, así que no
-        podemos mostrarte "rapidez de entrega" — solo el tipo de
-        contratación tal como lo clasifica la fuente.
-      </p>
-
-      <p className="ayuda ayuda-objeto">
-        Solo se muestran licitaciones vigentes y con el plazo de cotización
-        todavía abierto. SEACE a veces sigue marcando "Vigente" contratos que
-        ya vencieron; esos se descartan aquí usando la fecha real de cierre.
-      </p>
+      <details className="ayuda-detalle">
+        <summary>¿Qué se muestra aquí?</summary>
+        <p>
+          Solo licitaciones vigentes con el plazo de cotización todavía abierto
+          (SEACE a veces sigue marcando "Vigente" contratos que ya vencieron;
+          esos se descartan con la fecha real de cierre). "Bien" es compra de
+          un producto; "Servicio" es contratar un trabajo. SEACE no publica un
+          plazo de entrega, así que no se puede filtrar por rapidez de entrega.
+        </p>
+      </details>
     </div>
   );
 }

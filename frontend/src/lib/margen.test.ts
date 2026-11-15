@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calcularProyeccion, formatearMoneda } from "./margen";
+import { calcularProyeccion, formatearMoneda, resumirCotizacion, textoCotizacion, TOPE_8_UIT } from "./margen";
 
 describe("calcularProyeccion", () => {
   it("calcula precio de venta, total y ganancia con margen positivo", () => {
@@ -86,5 +86,45 @@ describe("formatearMoneda", () => {
 
   it("no rompe con valores no finitos", () => {
     expect(() => formatearMoneda(NaN)).not.toThrow();
+  });
+});
+
+describe("resumen de la cotización completa", () => {
+  const lineas = [
+    { producto: "CEMENTO", cantidad: 10, unidadMedida: "BOLSA", costoUnitario: "30" },
+    { producto: "ARENA", cantidad: 4, unidadMedida: "M3", costoUnitario: "" },
+    { producto: "FIERRO", cantidad: 2, unidadMedida: "UNIDAD", costoUnitario: "100" },
+  ];
+
+  it("suma solo lo que ya tiene costo y dice cuánto falta por costear", () => {
+    const r = resumirCotizacion(lineas, 20);
+    expect(r.costeados).toBe(2);
+    expect(r.total).toBe(3);
+    expect(r.costoTotal).toBeCloseTo(10 * 30 + 2 * 100);
+    expect(r.precioTotal).toBeCloseTo((10 * 30 + 2 * 100) * 1.2);
+    expect(r.gananciaTotal).toBeCloseTo((10 * 30 + 2 * 100) * 0.2);
+    expect(r.superaTope).toBe(false);
+  });
+
+  it("avisa si el total pasa de 8 UIT (S/ 44 000 con la UIT 2026)", () => {
+    expect(TOPE_8_UIT).toBe(44000);
+    const grande = [{ producto: "X", cantidad: 100, unidadMedida: "UNIDAD", costoUnitario: "400" }];
+    expect(resumirCotizacion(grande, 20).superaTope).toBe(true); // 100 * 480 = 48 000
+    expect(resumirCotizacion(grande, 0).superaTope).toBe(false); // 100 * 400 = 40 000
+  });
+
+  it("ignora costos inválidos o negativos", () => {
+    const r = resumirCotizacion([{ producto: "X", cantidad: 1, unidadMedida: "U", costoUnitario: "-5" }], 30);
+    expect(r.costeados).toBe(0);
+    expect(r.precioTotal).toBe(0);
+  });
+
+  it("arma un texto copiable solo con los productos costeados", () => {
+    const t = textoCotizacion("Cotización — MUNI (CM-1)", lineas, 20);
+    expect(t).toContain("Cotización — MUNI (CM-1)");
+    expect(t).toContain("CEMENTO");
+    expect(t).toContain("FIERRO");
+    expect(t).not.toContain("ARENA");
+    expect(t).toMatch(/TOTAL: S\/\s?600[.,]00/);
   });
 });

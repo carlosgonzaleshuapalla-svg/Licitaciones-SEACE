@@ -1,5 +1,6 @@
 import type { TenderSummary } from "../types/api";
 import { formatearFecha } from "../lib/fechas";
+import { describirPlazo } from "../lib/plazo";
 import { urlOficialSeace } from "../lib/seaceLinks";
 
 interface TenderCardProps {
@@ -13,21 +14,29 @@ export function TenderCard({
   seleccionado,
   onSeleccionar,
 }: TenderCardProps) {
+  const plazo = describirPlazo(tender.cotizacionFin);
+  const productos = tender.productos ?? [];
+  const restantes = (tender.productosTotal ?? productos.length) - productos.length;
+
   return (
     <article
       className={`tender-card${seleccionado ? " tender-card-activa" : ""}`}
     >
       <div className="tender-card-header">
         <span className="tender-codigo">{tender.codigo}</span>
-        <span
-          className={`badge badge-estado ${
-            tender.estado === "Vigente" ? "badge-vigente" : ""
-          }`}
-        >
-          {tender.estado}
-        </span>
-        {tender.esProductoRapido && (
-          <span className="badge badge-bien">Bien</span>
+        {tender.objeto && (
+          <span
+            className={`badge ${
+              tender.objeto === "Servicio" ? "badge-servicio" : "badge-bien"
+            }`}
+          >
+            {tender.objeto}
+          </span>
+        )}
+        {plazo && (
+          <span className={`badge badge-plazo badge-plazo-${plazo.nivel}`}>
+            {plazo.texto}
+          </span>
         )}
       </div>
 
@@ -52,6 +61,24 @@ export function TenderCard({
       >
         <p className="tender-descripcion">{tender.descripcion}</p>
 
+        {productos.length > 0 && (
+          <ul className="tender-productos" aria-label="Productos solicitados">
+            {productos.map((p) => (
+              <li key={p.producto}>
+                {p.cantidad !== null && p.cantidad !== undefined && (
+                  <strong>
+                    {p.cantidad} {p.unidadMedida ?? ""}
+                  </strong>
+                )}{" "}
+                {p.producto}
+              </li>
+            ))}
+            {restantes > 0 && (
+              <li className="tender-productos-mas">+{restantes} más</li>
+            )}
+          </ul>
+        )}
+
         <div className="tender-meta">
           <span>
             <strong>Ciudades:</strong>{" "}
@@ -60,15 +87,10 @@ export function TenderCard({
               : "No especificado"}
           </span>
           <span>
+            <strong>Cierra:</strong> {formatearFecha(tender.cotizacionFin)}
+          </span>
+          <span>
             <strong>Publicado:</strong> {formatearFecha(tender.fechaPublicacion)}
-          </span>
-          <span>
-            <strong>Cotización:</strong>{" "}
-            {formatearFecha(tender.cotizacionInicio)} –{" "}
-            {formatearFecha(tender.cotizacionFin)}
-          </span>
-          <span>
-            <strong>Items:</strong> {tender.cantidadItems}
           </span>
         </div>
       </button>

@@ -50,6 +50,7 @@ function rowToSummary(row) {
  * objeto: exact-match contra tenders.objeto ('Bien' o 'Servicio'; el
  * portal sincroniza solo esos dos tipos — Obra y Consultoría de Obra
  * quedan fuera de alcance). Sin valor, no filtra por tipo (trae ambos).
+ * orden: "publicacion" (por defecto) o "cierre"; ver ORDENES.
  * ocultarVencidas: si es true, esconde contratos cuya cotizacion_fin ya
  * pasó — SEACE a veces los sigue marcando "Vigente" aunque el plazo real
  * de cotización ya cerró (dato de la fuente, no lo controlamos), así que
@@ -58,12 +59,55 @@ function rowToSummary(row) {
  */
 const OBJETOS_VALIDOS = new Set(['Bien', 'Servicio']);
 
+/**
+ * Orden de la lista. "publicacion" (por defecto): lo más reciente primero.
+ * "cierre": lo que antes cierra la cotización primero (lo que hay que atender
+ * ya); sin fecha de cierre va al final. En ambos, el id desempata para que la
+ * paginación no repita ni salte filas.
+ */
+const ORDENES = {
+  publicacion: `${FECHA_PUBLICACION_ORDENABLE} DESC, t.id_contrato DESC`,
+  cierre: `(t.cotizacion_fin IS NULL), ${COTIZACION_FIN_ORDENABLE} ASC, t.id_contrato DESC`,
+};
+
+const PRODUCTOS_EN_VISTA_PREVIA = 3;
+
+/**
+ * Agrega a cada fila de la lista los primeros productos (con su cantidad),
+ * para poder juzgar de un vistazo qué piden sin abrir el detalle. Una sola
+ * consulta para toda la página.
+ */
+function adjuntarProductos(resumenes) {
+  if (resumenes.length === 0) return resumenes;
+  const ids = resumenes.map((r) => r.idContrato);
+  const filas = db
+    .prepare(
+      `SELECT id_contrato, producto, cantidad, unidad_medida FROM items
+       WHERE id_contrato IN (${ids.map(() => '?').join(',')}) ORDER BY id`
+    )
+    .all(...ids);
+
+  const porContrato = new Map();
+  for (const f of filas) {
+    if (!porContrato.has(f.id_contrato)) porContrato.set(f.id_contrato, new Map());
+    const nombres = porContrato.get(f.id_contrato);
+    if (f.producto && !nombres.has(f.producto)) {
+      nombres.set(f.producto, { producto: f.producto, cantidad: f.cantidad, unidadMedida: f.unidad_medida });
+    }
+  }
+  return resumenes.map((r) => {
+    const todos = [...(porContrato.get(r.idContrato)?.values() ?? [])];
+    return { ...r, productos: todos.slice(0, PRODUCTOS_EN_VISTA_PREVIA), productosTotal: todos.length };
+  });
+}
+
 export function listarTenders({
   departamento,
   estado,
   q,
   objeto,
   ocultarVencidas,
+  orden,
   page = 1,
   pageSize = 20,
 }) {
@@ -109,13 +153,13 @@ export function listarTenders({
   const rows = db
     .prepare(
       `SELECT DISTINCT t.* ${baseFrom} ${where}
-       ORDER BY ${FECHA_PUBLICACION_ORDENABLE} DESC, t.id_contrato DESC
+       ORDER BY ${ORDENES[orden] ?? ORDENES.publicacion}
        LIMIT @limit OFFSET @offset`
     )
     .all({ ...params, limit: pageSizeSafe, offset });
 
   return {
-    data: rows.map(rowToSummary),
+    data: adjuntarProductos(rows.map(rowToSummary)),
     total,
     page: pageSafe,
     pageSize: pageSizeSafe,

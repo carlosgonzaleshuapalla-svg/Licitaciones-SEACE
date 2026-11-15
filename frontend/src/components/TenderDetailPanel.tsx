@@ -1,6 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { TenderDetail } from "../types/api";
 import { formatearFecha } from "../lib/fechas";
+import {
+  formatearMoneda,
+  resumirCotizacion,
+  textoCotizacion,
+  TOPE_8_UIT,
+  type LineaCotizacion,
+} from "../lib/margen";
 import { urlOficialSeace } from "../lib/seaceLinks";
 import { CalculadoraMargen } from "./CalculadoraMargen";
 
@@ -9,6 +16,152 @@ interface TenderDetailPanelProps {
   cargando: boolean;
   error: string | null;
   onCerrar: () => void;
+}
+
+/**
+ * Items de la licitación con su proveedor sugerido y la proyección de venta.
+ * Un solo margen para toda la cotización y un total que suma todos los
+ * productos costeados. Se monta con `key` = id de la licitación, así el costo
+ * escrito no se arrastra de una licitación a otra.
+ */
+function ItemsYProyeccion({ detalle }: { detalle: TenderDetail }) {
+  const [margen, setMargen] = useState(30);
+  const [costos, setCostos] = useState<Record<string, string>>({});
+  const [copiado, setCopiado] = useState(false);
+
+  const lineas: LineaCotizacion[] = detalle.items.map((item) => ({
+    producto: item.producto,
+    cantidad: item.cantidad,
+    unidadMedida: item.unidadMedida,
+    costoUnitario: costos[String(item.idItem)] ?? "",
+  }));
+  const resumen = resumirCotizacion(lineas, margen);
+
+  const copiar = async () => {
+    const texto = textoCotizacion(
+      `Cotización — ${detalle.entidad} (${detalle.codigo})`,
+      lineas,
+      margen,
+    );
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    } catch {
+      // Sin permiso para el portapapeles: no se puede copiar desde aquí.
+      setCopiado(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="cotizacion-resumen">
+        <label className="campo">
+          <span>
+            Margen de ganancia sobre el costo: <strong>{margen}%</strong>
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={1}
+            value={margen}
+            onChange={(e) => setMargen(Number(e.target.value))}
+            aria-label="Porcentaje de ganancia"
+          />
+        </label>
+
+        <div className="calculadora-resultados">
+          <div>
+            <span className="resultado-label">Total a cotizar</span>
+            <span className="resultado-valor">
+              {formatearMoneda(resumen.precioTotal)}
+            </span>
+          </div>
+          <div>
+            <span className="resultado-label">Costo total</span>
+            <span className="resultado-valor">
+              {formatearMoneda(resumen.costoTotal)}
+            </span>
+          </div>
+          <div>
+            <span className="resultado-label">Ganancia total</span>
+            <span className="resultado-valor resultado-ganancia">
+              {formatearMoneda(resumen.gananciaTotal)}
+            </span>
+          </div>
+        </div>
+
+        <p className="cotizacion-nota">
+          {resumen.costeados} de {resumen.total} productos con costo.
+          {resumen.costeados < resumen.total &&
+            " Escribe el costo de cada uno para completar el total."}{" "}
+          Tope de contratación menor: 8 UIT = {formatearMoneda(TOPE_8_UIT)}.
+        </p>
+
+        {resumen.superaTope && (
+          <p className="cotizacion-alerta" role="alert">
+            El total supera el tope de 8 UIT ({formatearMoneda(TOPE_8_UIT)}).
+            Revisa cantidades y costos antes de cotizar.
+          </p>
+        )}
+
+        <button
+          type="button"
+          className="btn-copiar"
+          onClick={copiar}
+          disabled={resumen.costeados === 0}
+        >
+          {copiado ? "Copiado ✓" : "Copiar cotización"}
+        </button>
+      </div>
+
+      <div className="items-list">
+        {detalle.items.map((item) => (
+          <div className="item-card" key={item.idItem}>
+            <div className="item-header">
+              <h4>{item.producto}</h4>
+              <span className="item-meta">
+                {item.cantidad} {item.unidadMedida} · {item.ciudad}
+              </span>
+            </div>
+
+            <div className="proveedores">
+              {item.proveedores.length === 0 ? (
+                <p className="detalle-sin-datos">
+                  No hay proveedores sugeridos para este producto.
+                </p>
+              ) : (
+                item.proveedores.map((prov, i) => (
+                  <a
+                    key={`${prov.nombre}-${i}`}
+                    href={prov.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="proveedor-link"
+                  >
+                    {prov.nombre}
+                    <span className="proveedor-categoria">
+                      {prov.categoria}
+                    </span>
+                  </a>
+                ))
+              )}
+            </div>
+
+            <CalculadoraMargen
+              cantidad={item.cantidad}
+              costoUnitario={costos[String(item.idItem)] ?? ""}
+              onCostoChange={(v) =>
+                setCostos((c) => ({ ...c, [String(item.idItem)]: v }))
+              }
+              margen={margen}
+            />
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }
 
 export function TenderDetailPanel({
@@ -119,43 +272,7 @@ export function TenderDetailPanel({
                   Esta licitación no tiene items.
                 </p>
               ) : (
-                <div className="items-list">
-                  {detalle.items.map((item) => (
-                    <div className="item-card" key={item.idItem}>
-                      <div className="item-header">
-                        <h4>{item.producto}</h4>
-                        <span className="item-meta">
-                          {item.cantidad} {item.unidadMedida} · {item.ciudad}
-                        </span>
-                      </div>
-
-                      <div className="proveedores">
-                        {item.proveedores.length === 0 ? (
-                          <p className="detalle-sin-datos">
-                            No hay proveedores sugeridos para este producto.
-                          </p>
-                        ) : (
-                          item.proveedores.map((prov, i) => (
-                            <a
-                              key={`${prov.nombre}-${i}`}
-                              href={prov.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="proveedor-link"
-                            >
-                              {prov.nombre}
-                              <span className="proveedor-categoria">
-                                {prov.categoria}
-                              </span>
-                            </a>
-                          ))
-                        )}
-                      </div>
-
-                      <CalculadoraMargen cantidad={item.cantidad} />
-                    </div>
-                  ))}
-                </div>
+                <ItemsYProyeccion key={detalle.idContrato} detalle={detalle} />
               )}
             </section>
           </>

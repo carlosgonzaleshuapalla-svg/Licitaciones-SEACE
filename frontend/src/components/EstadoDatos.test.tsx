@@ -78,7 +78,32 @@ describe("EstadoDatos", () => {
       />,
     );
     expect(
-      screen.getByText(/Todavía no hay licitaciones descargadas/i),
+      screen.getByText(/Todavía no hay licitaciones cargadas/i),
     ).toBeInTheDocument();
+  });
+
+  describe("cuando los datos los renueva la Mac (fuente = semilla)", () => {
+    const ahora = Date.parse("2026-10-24T20:00:00Z");
+    const semilla: SyncStatus = { ...base, fuente: "semilla", datosAl: "2026-10-24T17:00:00Z" };
+
+    it("no avisa nada si los datos son recientes, aunque el servidor no hable con SEACE", () => {
+      const { container } = render(<EstadoDatos estado={semilla} onActualizar={() => {}} ahora={ahora} />);
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it("no muestra el aviso de 'Descargando desde SEACE' porque nadie descarga desde el servidor", () => {
+      const { container } = render(
+        <EstadoDatos estado={{ ...semilla, pendientesDetalle: 5, conDetalle: base.total - 5 }} onActualizar={() => {}} ahora={ahora} />,
+      );
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it("avisa si los datos tienen más de 12 horas", () => {
+      render(
+        <EstadoDatos estado={{ ...semilla, datosAl: "2026-10-23T17:00:00Z" }} onActualizar={() => {}} ahora={ahora} />,
+      );
+      expect(screen.getByText(/Los datos tienen 1 día/i)).toBeInTheDocument();
+      expect(screen.getByText(/ya haya licitaciones nuevas/i)).toBeInTheDocument();
+    });
   });
 });
