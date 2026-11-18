@@ -73,6 +73,10 @@ publicar_solo_entidades() {
   publicar "$TMP/semilla-previa.json.gz" && echo "Entidades publicadas (la semilla de SEACE se dejó como estaba)."
 }
 
+# Las entidades se publican ya (con la semilla anterior de SEACE), sin esperar a que SEACE termine:
+# la sincronización y la revisión de bases pueden tardar 40 min o más. Si falla, se publica al final igual.
+publicar_solo_entidades || echo "Entidades: no se pudieron adelantar; se publican al final de la corrida."
+
 # Hasta 150 resultados por corrida (a 1 pedido cada 2 s son ~5 min): alcanza para ponerse al día.
 if ! SEACE_RESULTADOS_LIMITE=150 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/recolectar.mjs "$TMP/semilla.json.gz"; then
   echo "SEACE no entregó datos frescos y completos; no se publica la semilla de SEACE."
