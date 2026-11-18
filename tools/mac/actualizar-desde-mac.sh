@@ -36,9 +36,47 @@ trap 'rm -rf "$TMP"; rmdir "$DATOS/lock" 2>/dev/null' EXIT
 cd "$REPO_DIR/backend" || exit 1
 [ -d node_modules ] || npm ci --silent || exit 1
 
+RAW="https://raw.githubusercontent.com/carlosgonzaleshuapalla-svg/Licitaciones-SEACE/data"
+
+# Otras entidades del Estado con compras de hasta 8 UIT en su propio portal (SUNARP, SBN, SANIPES,
+# MINSA, Hospital de Ventanilla). Es independiente de SEACE: se lee primero y se publica aunque
+# SEACE no responda. Si una entidad cae, se conserva lo último publicado de ella.
+curl -fsSL --max-time 60 "$RAW/entidades.json.gz" -o "$TMP/entidades-previo.json.gz" 2>/dev/null || rm -f "$TMP/entidades-previo.json.gz"
+if "$NODE" scripts/recolectar-entidades.mjs "$TMP/entidades.json.gz" "$TMP/entidades-previo.json.gz"; then
+  :
+else
+  echo "Entidades: no se pudo leer ningún portal; se publica sin actualizarlas."
+  rm -f "$TMP/entidades.json.gz"
+  [ -f "$TMP/entidades-previo.json.gz" ] && cp "$TMP/entidades-previo.json.gz" "$TMP/entidades.json.gz"
+fi
+
+# Publica en la rama `data` un solo commit sin historial: la semilla de SEACE y, si hay, el archivo de entidades.
+publicar() {
+  local semilla="$1" PUB
+  PUB="$TMP/publicar"; rm -rf "$PUB"; mkdir "$PUB" && cp "$semilla" "$PUB/seed.json.gz"
+  [ -f "$TMP/entidades.json.gz" ] && cp "$TMP/entidades.json.gz" "$PUB/entidades.json.gz"
+  ( cd "$PUB" || exit 1
+    git init -q -b data
+    git add .
+    git -c user.name="Licitaciones SEACE (Mac)" -c user.email="noreply@users.noreply.github.com" \
+      commit -q -m "Semilla de datos $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    GIT_TERMINAL_PROMPT=0 git push -f "$REMOTO" data )
+}
+
+# Si SEACE no entregó datos frescos pero las entidades sí se leyeron, se vuelve a publicar la
+# semilla anterior (ya validada cuando se subió) junto con las entidades nuevas: la rama `data` se
+# recrea en cada publicación y, sin esto, perdería la semilla.
+publicar_solo_entidades() {
+  [ -f "$TMP/entidades.json.gz" ] || return 1
+  curl -fsSL --max-time 120 "$RAW/seed.json.gz" -o "$TMP/semilla-previa.json.gz" || return 1
+  python3 -I "$REPO_DIR/.github/scripts/validar_semilla.py" "$TMP/semilla-previa.json.gz" || return 1
+  publicar "$TMP/semilla-previa.json.gz" && echo "Entidades publicadas (la semilla de SEACE se dejó como estaba)."
+}
+
 # Hasta 150 resultados por corrida (a 1 pedido cada 2 s son ~5 min): alcanza para ponerse al día.
 if ! SEACE_RESULTADOS_LIMITE=150 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/recolectar.mjs "$TMP/semilla.json.gz"; then
-  echo "SEACE no entregó datos frescos y completos; no se publica."
+  echo "SEACE no entregó datos frescos y completos; no se publica la semilla de SEACE."
+  publicar_solo_entidades
   exit 3
 fi
 # Historial de precios adjudicados (solo local, no se publica): copia legible en Excel.
@@ -46,16 +84,9 @@ SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/consultar-precios.mjs --csv "$DA
 # Histórico con rubro y estadísticos (Bienes y Servicios) para el Excel y el modelo de precio (solo local, no se publica).
 SEACE_DB_PATH="$DATOS/seace.db" "$NODE" scripts/exportar-historico.mjs --salida "$DATOS/historico" || echo "No se pudo exportar el histórico por rubro."
 
-python3 -I "$REPO_DIR/.github/scripts/validar_semilla.py" "$TMP/semilla.json.gz" || { echo "Semilla inválida; no se publica."; exit 4; }
+python3 -I "$REPO_DIR/.github/scripts/validar_semilla.py" "$TMP/semilla.json.gz" || { echo "Semilla inválida; no se publica."; publicar_solo_entidades; exit 4; }
 
-# Un solo commit sin historial, igual que antes.
-mkdir "$TMP/publicar" && cp "$TMP/semilla.json.gz" "$TMP/publicar/seed.json.gz"
-cd "$TMP/publicar" || exit 1
-git init -q -b data
-git add seed.json.gz
-git -c user.name="Licitaciones SEACE (Mac)" -c user.email="noreply@users.noreply.github.com" \
-  commit -q -m "Semilla de datos $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-if GIT_TERMINAL_PROMPT=0 git push -f "$REMOTO" data; then
+if publicar "$TMP/semilla.json.gz"; then
   echo "Semilla publicada en la rama data."
 else
   echo "No se pudo publicar (¿faltan credenciales de GitHub en el llavero?)."

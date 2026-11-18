@@ -4,6 +4,7 @@ import { runSync, getSyncStatus } from '../syncService.js';
 import { syncLimiter, exportLimiter } from '../security.js';
 import { exportarSemilla, comprimirSemilla, infoSemilla } from '../semilla.js';
 import { fuenteDeDatos, sincronizaConSeace } from '../modoDatos.js';
+import { listarEntidades, listarRequerimientos } from '../entidades/almacen.js';
 
 export const apiRouter = Router();
 
@@ -41,6 +42,26 @@ apiRouter.get('/tenders/:id', (req, res) => {
     return res.status(404).json({ error: 'no encontrado' });
   }
   res.json(detalle);
+});
+
+// Otras entidades del Estado con compras menores o iguales a 8 UIT en su propio
+// portal (SUNARP, SBN, SANIPES, MINSA…). Datos de solo lectura que publica la Mac.
+apiRouter.get('/entidades', (req, res) => {
+  res.json(listarEntidades());
+});
+
+apiRouter.get('/entidades/:id/requerimientos', (req, res) => {
+  const { q, tipo, zona, orden, page, pageSize } = req.query;
+  const resultado = listarRequerimientos(req.params.id, {
+    q: typeof q === 'string' ? q.slice(0, 200) : undefined,
+    tipo: tipo === 'Bien' || tipo === 'Servicio' ? tipo : undefined,
+    zona: typeof zona === 'string' && zona ? zona.slice(0, 120) : undefined,
+    orden: orden === 'publicacion' ? 'publicacion' : 'cierre',
+    page: page ? Number(page) : 1,
+    pageSize: pageSize ? Number(pageSize) : 20,
+  });
+  if (!resultado) return res.status(404).json({ error: 'entidad no encontrada' });
+  res.json(resultado);
 });
 
 // Estado de la sincronización y qué tan completos están los datos (cuántas

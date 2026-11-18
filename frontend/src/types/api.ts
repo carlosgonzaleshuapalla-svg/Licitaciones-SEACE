@@ -124,3 +124,57 @@ export interface TendersQuery {
   page?: number;
   pageSize?: number;
 }
+
+// --- Otras entidades del Estado (compras menores o iguales a 8 UIT en su propio portal) ---
+
+export interface Entidad {
+  id: string;
+  nombre: string;
+  nombreCompleto: string;
+  portal: string;
+  // Requerimientos con el plazo todavía abierto.
+  vigentes: number;
+  // Cuándo se leyó por última vez el portal de la entidad (ISO), o null si nunca.
+  actualizadoEn: string | null;
+  // Si la última lectura falló: lo que se muestra es de la lectura anterior.
+  error: string | null;
+}
+
+export interface EntidadesResponse {
+  datosAl: string | null;
+  entidades: Entidad[];
+}
+
+export interface Requerimiento {
+  id: string;
+  tipo: ObjetoContrato | null;
+  titulo: string;
+  descripcion: string | null;
+  zona: string | null;
+  publicado: string | null;
+  // Cierre de la cotización (ISO con zona de Lima).
+  vence: string;
+  documentos: { nombre: string; url: string }[];
+  // Dónde ver/postular: la ficha del requerimiento o el portal de la entidad.
+  enlace: string;
+}
+
+export interface RequerimientosResponse {
+  entidad: Pick<Entidad, "id" | "nombre" | "nombreCompleto" | "portal">;
+  actualizadoEn: string | null;
+  error: string | null;
+  zonas: string[];
+  data: Requerimiento[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface RequerimientosQuery {
+  q?: string;
+  tipo?: ObjetoContrato;
+  zona?: string;
+  orden?: "cierre" | "publicacion";
+  page?: number;
+  pageSize?: number;
+}

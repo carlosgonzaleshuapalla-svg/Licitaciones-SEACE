@@ -32,3 +32,18 @@ export function formatearFecha(valor: string | undefined | null): string {
     minute: "2-digit",
   });
 }
+
+/** Fecha ISO 8601 (las de otras entidades) mostrada en hora de Lima, sin importar la zona de quien mira. */
+export function formatearFechaIso(valor: string | undefined | null): string {
+  if (!valor) return "—";
+  const d = new Date(valor);
+  if (Number.isNaN(d.getTime())) return valor;
+  return d.toLocaleString("es-PE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Lima",
+  });
+}

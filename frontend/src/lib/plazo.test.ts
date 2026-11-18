@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describirPlazo, haceCuanto, instanteDeSeace } from "./plazo";
+import { describirPlazo, describirPlazoIso, haceCuanto, instanteDeSeace } from "./plazo";
 
 // Las fechas de SEACE están en hora de Lima (UTC-5): 12:00 en Lima = 17:00 UTC.
 const lima = (d: string) => Date.parse(d.replace(" ", "T") + "-05:00");
@@ -44,5 +44,19 @@ describe("haceCuanto", () => {
     expect(haceCuanto("2026-10-22T12:00:00Z", ahora)).toBe("hace 2 días");
     expect(haceCuanto(null, ahora)).toBeNull();
     expect(haceCuanto("no es fecha", ahora)).toBeNull();
+  });
+});
+
+describe("describirPlazoIso", () => {
+  const ahora = Date.parse("2026-11-18T10:00:00-05:00");
+  it("calcula lo que falta con fechas ISO de otras entidades", () => {
+    expect(describirPlazoIso("2026-11-18T10:30:00-05:00", ahora)).toEqual({ texto: "Cierra en 30 min", nivel: "urgente" });
+    expect(describirPlazoIso("2026-11-18T20:00:00-05:00", ahora)).toEqual({ texto: "Cierra en 10 h", nivel: "pronto" });
+    expect(describirPlazoIso("2026-11-21T10:00:00-05:00", ahora)).toEqual({ texto: "Cierra en 3 días", nivel: "normal" });
+    expect(describirPlazoIso("2026-11-18T09:59:00-05:00", ahora)?.nivel).toBe("vencida");
+  });
+  it("devuelve null si no es una fecha", () => {
+    expect(describirPlazoIso("pronto", ahora)).toBeNull();
+    expect(describirPlazoIso(null, ahora)).toBeNull();
   });
 });

@@ -35,7 +35,19 @@ export function describirPlazo(
   cotizacionFin: string | null | undefined,
   ahora: number = Date.now(),
 ): Plazo | null {
-  const fin = instanteDeSeace(cotizacionFin);
+  return plazoHasta(instanteDeSeace(cotizacionFin), ahora);
+}
+
+/** Lo mismo para fechas ISO 8601 con zona (las de los portales de otras entidades). */
+export function describirPlazoIso(
+  iso: string | null | undefined,
+  ahora: number = Date.now(),
+): Plazo | null {
+  const t = Date.parse(iso ?? "");
+  return plazoHasta(Number.isNaN(t) ? null : t, ahora);
+}
+
+function plazoHasta(fin: number | null, ahora: number): Plazo | null {
   if (fin === null) return null;
 
   const falta = fin - ahora;

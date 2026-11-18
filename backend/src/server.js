@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { startScheduledSync } from './syncService.js';
 import { cargarSemillaSiVacia, iniciarRefrescoDeSemilla } from './semilla.js';
 import { sincronizaConSeace } from './modoDatos.js';
+import { refrescarEntidades, iniciarRefrescoDeEntidades } from './entidades/almacen.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -28,4 +29,7 @@ app.listen(PORT, async () => {
   }
   if (sincronizaConSeace()) startScheduledSync({ log: console.log });
   else iniciarRefrescoDeSemilla({ log: console.log });
+  // Requerimientos de las otras entidades (SUNARP, SBN…): se cargan ya y se relee cada rato.
+  await refrescarEntidades({ log: console.log });
+  iniciarRefrescoDeEntidades({ log: console.log });
 });

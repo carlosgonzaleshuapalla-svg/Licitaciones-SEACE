@@ -1,5 +1,8 @@
 import type {
+  EntidadesResponse,
   Meta,
+  RequerimientosQuery,
+  RequerimientosResponse,
   SyncResponse,
   SyncStatus,
   TenderDetail,
@@ -80,6 +83,27 @@ export function getTenders(query: TendersQuery): Promise<TendersResponse> {
 
 export function getTenderDetail(id: string | number): Promise<TenderDetail> {
   return request<TenderDetail>(`/api/tenders/${id}`);
+}
+
+export function getEntidades(): Promise<EntidadesResponse> {
+  return request<EntidadesResponse>("/api/entidades");
+}
+
+export function getRequerimientos(
+  entidadId: string,
+  query: RequerimientosQuery,
+): Promise<RequerimientosResponse> {
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.tipo) params.set("tipo", query.tipo);
+  if (query.zona) params.set("zona", query.zona);
+  if (query.orden) params.set("orden", query.orden);
+  if (query.page !== undefined) params.set("page", String(query.page));
+  if (query.pageSize !== undefined) params.set("pageSize", String(query.pageSize));
+  const qs = params.toString();
+  return request<RequerimientosResponse>(
+    `/api/entidades/${encodeURIComponent(entidadId)}/requerimientos${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export async function postSync(): Promise<SyncResponse> {
