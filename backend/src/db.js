@@ -55,6 +55,21 @@ if (!db.pragma('table_info(tenders)').some((c) => c.name === 'detalle_ok')) {
   db.exec(`ALTER TABLE tenders ADD COLUMN detalle_ok INTEGER NOT NULL DEFAULT 0`);
 }
 
+// (1b) exige_experiencia (NULL = no se leyó aún el detalle con este criterio,
+// 0 = no se menciona, 1 = el texto la menciona) y nota_experiencia (el pedazo
+// de texto que lo dice). Ver requisitos.js.
+if (!db.pragma('table_info(tenders)').some((c) => c.name === 'exige_experiencia')) {
+  db.exec(`ALTER TABLE tenders ADD COLUMN exige_experiencia INTEGER`);
+  db.exec(`ALTER TABLE tenders ADD COLUMN nota_experiencia TEXT`);
+}
+// (1c) Revisión del "Anexo de la contratación" (las bases): bases_estado = NULL
+// (no revisada) | 'leido' | 'sin-anexo' | 'no-soportado' | 'ilegible' | 'error';
+// experiencia_fuente = 'descripcion' | 'anexo' (de dónde salió un exige_experiencia = 1).
+if (!db.pragma('table_info(tenders)').some((c) => c.name === 'bases_estado')) {
+  db.exec(`ALTER TABLE tenders ADD COLUMN bases_estado TEXT`);
+  db.exec(`ALTER TABLE tenders ADD COLUMN experiencia_fuente TEXT`);
+}
+
 // (2) items usaba id_item (el ID de catálogo CUBSO de SEACE) como clave
 // primaria. Ese ID NO es único: el mismo producto aparece en decenas de
 // licitaciones (y hasta repetido dentro de una), así que cada contrato
@@ -132,6 +147,20 @@ const insertItemStmt = db.prepare(`
   VALUES (@id_item, @id_contrato, @producto, @cantidad, @unidad_medida, @ciudad)
 `);
 
+// Lo que dice la descripción. Una vez revisadas las bases (bases_estado no nulo)
+// ya no se pisa: el anexo manda.
+const guardarExperienciaStmt = db.prepare(
+  `UPDATE tenders
+      SET exige_experiencia = @exige, nota_experiencia = @nota,
+          experiencia_fuente = CASE WHEN @exige = 1 THEN 'descripcion' ELSE NULL END
+    WHERE id_contrato = @id AND bases_estado IS NULL`,
+);
+const guardarBasesStmt = db.prepare(
+  `UPDATE tenders
+      SET bases_estado = @estado, exige_experiencia = @exige, nota_experiencia = @nota, experiencia_fuente = @fuente
+    WHERE id_contrato = @id`,
+);
+
 const marcarDetalleOkStmt = db.prepare(
   `UPDATE tenders SET cantidad_items = ?, detalle_ok = 1 WHERE id_contrato = ?`,
 );
@@ -175,7 +204,7 @@ export function upsertTenderHeader(tender) {
  * transacción, y deja la cabecera marcada con detalle_ok = 1 y su
  * cantidad_items real.
  */
-export const replaceTenderDetail = db.transaction((idContrato, items, etapas) => {
+export const replaceTenderDetail = db.transaction((idContrato, items, etapas, experiencia = null) => {
   deleteItemsForContratoStmt.run(idContrato);
   deleteEtapasForContratoStmt.run(idContrato);
   deleteDepartamentosForContratoStmt.run(idContrato);
@@ -196,6 +225,8 @@ export const replaceTenderDetail = db.transaction((idContrato, items, etapas) =>
   }
 
   marcarDetalleOkStmt.run(items.length, idContrato);
+  // Sin `experiencia` (p. ej. una semilla vieja) se deja lo que ya había.
+  if (experiencia) guardarExperienciaStmt.run({ id: idContrato, exige: experiencia.exige, nota: experiencia.nota });
 });
 
 /**
@@ -208,6 +239,26 @@ export function filtrarPendientesDetalle(idsEnOrden) {
     db.prepare(`SELECT id_contrato FROM tenders WHERE detalle_ok = 0`).all().map((r) => r.id_contrato),
   );
   return idsEnOrden.filter((id) => pendientes.has(id));
+}
+
+/** Registra el resultado de revisar el anexo de un contrato (ver bases.js). */
+export function guardarRevisionBases(idContrato, { estado, exige, nota, fuente }) {
+  guardarBasesStmt.run({ id: idContrato, estado, exige, nota: nota ?? null, fuente: fuente ?? null });
+}
+
+/**
+ * Bienes con detalle descargado cuyas bases aún no se revisaron (o que fallaron
+ * y se reintentan), los que cierran antes primero. El filtro de plazo abierto
+ * lo aplica quien llama.
+ */
+export function contratosConBasesPendientes() {
+  return db
+    .prepare(
+      `SELECT id_contrato, cotizacion_fin, descripcion, exige_experiencia, nota_experiencia, bases_estado
+         FROM tenders
+        WHERE objeto = 'Bien' AND detalle_ok = 1 AND (bases_estado IS NULL OR bases_estado = 'error')`,
+    )
+    .all();
 }
 
 /** Conteos para mostrar al usuario qué tan completo está lo que ve. */

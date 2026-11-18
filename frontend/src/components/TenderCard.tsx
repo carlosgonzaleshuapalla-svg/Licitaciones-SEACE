@@ -33,6 +33,14 @@ export function TenderCard({
             {tender.objeto}
           </span>
         )}
+        {tender.exigeExperiencia === true && (
+          <span
+            className="badge badge-experiencia"
+            title={tender.notaExperiencia ?? "El texto pide experiencia previa"}
+          >
+            Pide experiencia
+          </span>
+        )}
         {plazo && (
           <span className={`badge badge-plazo badge-plazo-${plazo.nivel}`}>
             {plazo.texto}

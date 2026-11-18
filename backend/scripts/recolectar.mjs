@@ -14,6 +14,8 @@
 import fs from 'node:fs';
 import { cargarSemillaSiVacia, exportarSemilla, comprimirSemilla } from '../src/semilla.js';
 import { runSync, getSyncStatus } from '../src/syncService.js';
+import { revisarBasesPendientes, compilarLector, crearLectorDeArchivos } from '../src/bases.js';
+import { crearClienteSeace } from '../src/seaceClient.js';
 
 const salida = process.argv[2];
 if (!salida) {
@@ -31,6 +33,26 @@ console.log(`Resultado: ok=${resultado.ok} total=${estado.total} conDetalle=${es
 if (!fresco || pctPendiente > 3) {
   console.error('No se escribe semilla: SEACE limitó el acceso, la lista quedó incompleta o faltan demasiados detalles.');
   process.exit(3);
+}
+
+// Bases (anexo de la contratación) de los Bienes con plazo abierto: ver si piden
+// experiencia. Es un extra: si falla o SEACE limita, se publica igual lo que hay.
+if (process.env.SEACE_BASES !== '0') {
+  try {
+    const exe = await compilarLector({ log: console.log });
+    if (!exe) {
+      console.log('Bases: sin lector de PDF (hace falta macOS con las herramientas de línea de comandos); se omite.');
+    } else {
+      await revisarBasesPendientes({
+        client: crearClienteSeace(),
+        leerTexto: crearLectorDeArchivos(exe),
+        log: console.log,
+        maxMs: (Number(process.env.BASES_MAX_MINUTOS) || 30) * 60_000,
+      });
+    }
+  } catch (err) {
+    console.error(`Bases: se omite por un error inesperado (${String(err.message).slice(0, 200)}).`);
+  }
 }
 
 const semilla = exportarSemilla({ sincronizadoEn: estado.ultimoExito ? Date.parse(estado.ultimoExito) : Date.now() });

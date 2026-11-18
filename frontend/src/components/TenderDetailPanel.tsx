@@ -164,6 +164,19 @@ function ItemsYProyeccion({ detalle }: { detalle: TenderDetail }) {
   );
 }
 
+function textoBasesNoLeidas(estado: string | null | undefined): string {
+  switch (estado) {
+    case "sin-anexo":
+      return "La entidad no adjuntó anexo: no se puede saber si piden experiencia. Confírmalo en SEACE.";
+    case "no-soportado":
+      return "El anexo está en un formato que no se puede leer aquí (Excel, ZIP, imagen…). Revísalo en SEACE.";
+    case "ilegible":
+      return "El anexo no se pudo leer (escaneo ilegible o muy pesado). Revísalo en SEACE.";
+    default:
+      return "Las bases todavía no se revisaron, así que no se sabe si piden experiencia. Confírmalo en SEACE.";
+  }
+}
+
 export function TenderDetailPanel({
   detalle,
   cargando,
@@ -244,6 +257,25 @@ export function TenderDetailPanel({
                 </a>
               </h2>
               <p>{detalle.descripcion}</p>
+              {detalle.exigeExperiencia === true && (
+                <p className="aviso-experiencia">
+                  <strong>Pide experiencia previa</strong>{" "}
+                  <span className="aviso-fuente">
+                    ({detalle.experienciaFuente === "anexo" ? "según el anexo de la contratación" : "según la descripción"}).
+                  </span>{" "}
+                  {detalle.notaExperiencia && <em>«{detalle.notaExperiencia}»</em>}
+                </p>
+              )}
+              {detalle.exigeExperiencia === false && detalle.basesEstado === "leido" && (
+                <p className="aviso-experiencia aviso-experiencia-ok">
+                  Se leyó el anexo de la contratación y no pide experiencia previa.
+                </p>
+              )}
+              {detalle.exigeExperiencia !== true && detalle.basesEstado !== "leido" && (
+                <p className="aviso-experiencia aviso-experiencia-leve">
+                  {textoBasesNoLeidas(detalle.basesEstado)}
+                </p>
+              )}
             </header>
 
             <section className="detalle-seccion">

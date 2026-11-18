@@ -25,6 +25,7 @@ function App() {
   const [filtros, setFiltros] = useState<FiltrosState>(() => ({
     ...leerPreferencias(),
     q: "",
+    experiencia: "",
   }));
   const [qDebounced, setQDebounced] = useState("");
 
@@ -102,7 +103,7 @@ function App() {
   // Volver a página 1 cuando cambian los filtros.
   useEffect(() => {
     setPage(1);
-  }, [filtros.departamento, filtros.objeto, filtros.orden, qDebounced]);
+  }, [filtros.departamento, filtros.objeto, filtros.orden, filtros.experiencia, qDebounced]);
 
   // Cargar lista de licitaciones.
   useEffect(() => {
@@ -115,6 +116,7 @@ function App() {
       estado: ESTADO_VIGENTE,
       q: qDebounced || undefined,
       objeto: filtros.objeto || undefined,
+      experiencia: filtros.experiencia || undefined,
       orden: filtros.orden,
       // Siempre solo lo que aún se puede cotizar (el portal no es un histórico).
       ocultarVencidas: true,
@@ -145,6 +147,7 @@ function App() {
     filtros.departamento,
     filtros.objeto,
     filtros.orden,
+    filtros.experiencia,
     qDebounced,
     page,
     refrescar,

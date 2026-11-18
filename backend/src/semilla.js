@@ -18,7 +18,9 @@ import zlib from 'node:zlib';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { db, upsertTenderHeader, replaceTenderDetail, contarEstadoDatos, pruneTendersNotIn } from './db.js';
+import { db, upsertTenderHeader, replaceTenderDetail, guardarRevisionBases, contarEstadoDatos, pruneTendersNotIn } from './db.js';
+
+const ESTADOS_BASES = new Set(['leido', 'sin-anexo', 'no-soportado', 'ilegible', 'error']);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -63,6 +65,20 @@ function normalizarTender(t) {
 
   let items = null;
   let etapas = null;
+  // 0/1 si la semilla ya trae el dato; null si es una semilla vieja.
+  const experiencia =
+    t.exigeExperiencia === 0 || t.exigeExperiencia === 1
+      ? { exige: t.exigeExperiencia, nota: t.exigeExperiencia === 1 ? texto(t.notaExperiencia, 400) : null }
+      : null;
+  // Resultado de la revisión del anexo (si la semilla ya la trae).
+  const bases = ESTADOS_BASES.has(t.basesEstado)
+    ? {
+        estado: t.basesEstado,
+        exige: experiencia?.exige ?? 0,
+        nota: experiencia?.nota ?? null,
+        fuente: experiencia?.exige === 1 && (t.experienciaFuente === 'anexo' || t.experienciaFuente === 'descripcion') ? t.experienciaFuente : null,
+      }
+    : null;
   if (t.detalleOk) {
     if (!Array.isArray(t.items) || !Array.isArray(t.etapas)) return null;
     if (t.items.length > MAX_ITEMS_POR_TENDER || t.etapas.length > MAX_ETAPAS_POR_TENDER) return null;
@@ -86,7 +102,7 @@ function normalizarTender(t) {
         fin: texto(e.fin, 40),
       }));
   }
-  return { header, items, etapas };
+  return { header, items, etapas, experiencia, bases };
 }
 
 // ---------- exportar ----------
@@ -128,6 +144,10 @@ export function exportarSemilla({ sincronizadoEn = null } = {}) {
       cotizacionFin: t.cotizacion_fin,
       esProductoRapido: t.es_producto_rapido,
       detalleOk: t.detalle_ok,
+      exigeExperiencia: t.exige_experiencia,
+      notaExperiencia: t.nota_experiencia,
+      basesEstado: t.bases_estado,
+      experienciaFuente: t.experiencia_fuente,
     };
     return t.detalle_ok
       ? { ...base, items: itemsPor.get(t.id_contrato) ?? [], etapas: etapasPor.get(t.id_contrato) ?? [] }
@@ -174,7 +194,8 @@ export function importarSemilla(semilla) {
         continue;
       }
       upsertTenderHeader({ ...t.header, updated_at: marca });
-      if (t.items) replaceTenderDetail(t.header.id_contrato, t.items, t.etapas);
+      if (t.items) replaceTenderDetail(t.header.id_contrato, t.items, t.etapas, t.experiencia);
+      if (t.bases) guardarRevisionBases(t.header.id_contrato, t.bases);
       cargados++;
     }
   })();

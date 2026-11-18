@@ -814,3 +814,29 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* Exigencia de experiencia previa (detectada por texto) */
+.badge-experiencia {
+  background: #fdecea;
+  color: #8a1c13;
+}
+.aviso-experiencia {
+  margin: 0.6rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-left: 3px solid #c0392b;
+  background: #fdf3f2;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.aviso-experiencia-leve {
+  border-left-color: #9aa3ad;
+  background: #f4f6f8;
+  color: #4b5560;
+}
+.aviso-experiencia-ok {
+  border-left-color: #2e7d32;
+  background: #f1f8f2;
+  color: #24562b;
+}
+.aviso-fuente { color: #6b3a35; }

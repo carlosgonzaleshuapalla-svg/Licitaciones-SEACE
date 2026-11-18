@@ -39,6 +39,12 @@ function rowToSummary(row) {
     ciudades: ciudadesDe(row.id_contrato),
     cantidadItems: row.cantidad_items,
     esProductoRapido: !!row.es_producto_rapido,
+    // null = aún no se leyó el detalle con este criterio; true/false según el texto.
+    exigeExperiencia: row.exige_experiencia === null || row.exige_experiencia === undefined ? null : row.exige_experiencia === 1,
+    notaExperiencia: row.nota_experiencia ?? null,
+    // De dónde salió: 'anexo' (las bases) o 'descripcion'; y si las bases ya se leyeron ('leido') o no.
+    experienciaFuente: row.experiencia_fuente ?? null,
+    basesEstado: row.bases_estado ?? null,
   };
 }
 
@@ -50,7 +56,7 @@ function rowToSummary(row) {
  * objeto: exact-match contra tenders.objeto ('Bien' o 'Servicio'; el
  * portal sincroniza solo esos dos tipos — Obra y Consultoría de Obra
  * quedan fuera de alcance). Sin valor, no filtra por tipo (trae ambos).
- * orden: "publicacion" (por defecto) o "cierre"; ver ORDENES.
+ * experiencia: "con" | "sin" (ver abajo). orden: "publicacion" (por defecto) o "cierre"; ver ORDENES.
  * ocultarVencidas: si es true, esconde contratos cuya cotizacion_fin ya
  * pasó — SEACE a veces los sigue marcando "Vigente" aunque el plazo real
  * de cotización ya cerró (dato de la fuente, no lo controlamos), así que
@@ -107,6 +113,7 @@ export function listarTenders({
   q,
   objeto,
   ocultarVencidas,
+  experiencia,
   orden,
   page = 1,
   pageSize = 20,
@@ -132,6 +139,11 @@ export function listarTenders({
     condiciones.push('t.objeto = @objeto');
     params.objeto = objeto;
   }
+  // "con": la descripción o el anexo de la contratación piden experiencia.
+  // "sin": se LEYÓ el anexo y no la pide (sin anexo, ilegible o aún no revisado:
+  // no se puede afirmar nada, así que no entra en ninguno de los dos).
+  if (experiencia === 'con') condiciones.push('t.exige_experiencia = 1');
+  if (experiencia === 'sin') condiciones.push(`t.exige_experiencia = 0 AND t.bases_estado = 'leido'`);
   if (ocultarVencidas) {
     condiciones.push(`(t.cotizacion_fin IS NULL OR ${COTIZACION_FIN_ORDENABLE} >= @ahora)`);
     params.ahora = ahoraLimaOrdenable();

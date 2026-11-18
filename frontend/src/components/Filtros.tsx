@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import type { ObjetoContrato, OrdenLista } from "../types/api";
+import type { FiltroExperiencia, ObjetoContrato, OrdenLista } from "../types/api";
 
 export interface FiltrosState {
   departamento: string;
@@ -8,6 +8,8 @@ export interface FiltrosState {
   // Consultoría de Obra, así que estas son las únicas opciones reales).
   objeto: ObjetoContrato | "";
   orden: OrdenLista;
+  // "" = cualquiera. No se recuerda entre visitas, para no esconder resultados sin que se note.
+  experiencia: FiltroExperiencia | "";
 }
 
 interface FiltrosProps {
@@ -60,6 +62,21 @@ export function Filtros({ filtros, departamentos, onChange }: FiltrosProps) {
         </div>
 
         <div className="campo">
+          <label htmlFor="f-experiencia">Experiencia previa</label>
+          <select
+            id="f-experiencia"
+            value={filtros.experiencia}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              actualizar({ experiencia: e.target.value as FiltrosState["experiencia"] })
+            }
+          >
+            <option value="">Cualquiera</option>
+            <option value="sin">Sin exigencia de experiencia</option>
+            <option value="con">Pide experiencia</option>
+          </select>
+        </div>
+
+        <div className="campo">
           <label htmlFor="f-orden">Ordenar por</label>
           <select
             id="f-orden"
@@ -95,6 +112,16 @@ export function Filtros({ filtros, departamentos, onChange }: FiltrosProps) {
           esos se descartan con la fecha real de cierre). "Bien" es compra de
           un producto; "Servicio" es contratar un trabajo. SEACE no publica un
           plazo de entrega, así que no se puede filtrar por rapidez de entrega.
+        </p>
+        <p>
+          <strong>Experiencia previa:</strong> SEACE no tiene un campo oficial
+          para esto, así que se lee el anexo de cada licitación (las
+          especificaciones técnicas o términos de referencia que adjunta la
+          entidad) y su descripción. "Sin exigencia de experiencia" aparece solo
+          cuando el anexo se leyó completo y no la pide; si la licitación no
+          trae anexo, está escaneado de forma ilegible o todavía no se revisó,
+          no entra en ninguna de las dos listas. Hoy se revisan los Bienes con
+          plazo abierto. Es una ayuda: confírmalo en SEACE antes de cotizar.
         </p>
       </details>
     </div>

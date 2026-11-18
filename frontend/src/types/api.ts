@@ -26,6 +26,15 @@ export interface TenderSummary {
   ciudades: string[];
   cantidadItems: number;
   esProductoRapido: boolean;
+  // ¿La licitación pide experiencia previa al postor? SEACE no tiene un campo
+  // oficial: se lee el anexo de la contratación (las bases) y la descripción
+  // (ver backend/src/bases.js). "No la pide" solo se puede afirmar si basesEstado = "leido".
+  exigeExperiencia?: boolean | null;
+  notaExperiencia?: string | null;
+  // De dónde salió ("anexo" = las bases; "descripcion" = el texto de la licitación) y
+  // si las bases ya se leyeron: "leido" | "sin-anexo" | "no-soportado" | "ilegible" | "error" | null (sin revisar).
+  experienciaFuente?: "anexo" | "descripcion" | null;
+  basesEstado?: string | null;
   // Solo vienen en la lista (no en el detalle, que trae todos los items).
   productos?: ProductoResumen[];
   productosTotal?: number;
@@ -101,12 +110,16 @@ export type ObjetoContrato = "Bien" | "Servicio";
 // "publicacion": lo más reciente primero. "cierre": lo que antes vence primero.
 export type OrdenLista = "publicacion" | "cierre";
 
+// "con": el texto menciona que piden experiencia; "sin": no la menciona.
+export type FiltroExperiencia = "con" | "sin";
+
 export interface TendersQuery {
   departamento?: string;
   estado?: string;
   q?: string;
   objeto?: ObjetoContrato;
   ocultarVencidas?: boolean;
+  experiencia?: FiltroExperiencia;
   orden?: OrdenLista;
   page?: number;
   pageSize?: number;

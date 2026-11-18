@@ -12,6 +12,13 @@
 
 const BASE_URL = 'https://prod6.seace.gob.pe/v1/s8uit-services/buscadorpublico/contrataciones';
 
+// Archivos adjuntos de cada contratación (el "Anexo de la contratación" trae las
+// especificaciones técnicas o términos de referencia). Es público, sin sesión.
+const ARCHIVOS_URL = 'https://prod6.seace.gob.pe/v1/s8uit-services/archivo/archivos-publico';
+// Un archivo más grande que esto no se baja (las bases normales pesan unos pocos MB).
+export const MAX_BYTES_ARCHIVO = 15 * 1024 * 1024;
+const FETCH_TIMEOUT_ARCHIVO_MS = 60_000;
+
 const USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
   '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -78,17 +85,17 @@ export function crearClienteSeace({
     return turno;
   }
 
-  async function fetchJsonConReintento(url, { retries = MAX_RETRIES } = {}) {
+  async function fetchJsonConReintento(url, { retries = MAX_RETRIES, binario = false } = {}) {
     let lastError;
     for (let intento = 0; intento <= retries; intento++) {
       await esperarTurno();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      const timeout = setTimeout(() => controller.abort(), binario ? FETCH_TIMEOUT_ARCHIVO_MS : FETCH_TIMEOUT_MS);
       try {
         const res = await fetchImpl(url, {
           headers: {
             'User-Agent': USER_AGENT,
-            Accept: 'application/json',
+            Accept: binario ? '*/*' : 'application/json',
           },
           signal: controller.signal,
         });
@@ -102,7 +109,25 @@ export function crearClienteSeace({
         if (!res.ok) {
           throw new Error(`HTTP ${res.status} ${res.statusText} para ${url}`);
         }
-        const json = await res.json();
+        let json;
+        if (binario) {
+          // Se rechaza por el tamaño declarado antes de bajar nada.
+          const declarado = Number(res.headers?.get?.('content-length'));
+          if (Number.isFinite(declarado) && declarado > MAX_BYTES_ARCHIVO) {
+            clearTimeout(timeout);
+            const e = new Error(`archivo demasiado grande (${declarado} bytes)`);
+            e.demasiadoGrande = true;
+            throw e;
+          }
+          json = Buffer.from(await res.arrayBuffer());
+          if (json.length > MAX_BYTES_ARCHIVO) {
+            const e = new Error(`archivo demasiado grande (${json.length} bytes)`);
+            e.demasiadoGrande = true;
+            throw e;
+          }
+        } else {
+          json = await res.json();
+        }
         // Si viene yendo bien un buen rato, se vuelve a acelerar hacia la base.
         if (intervaloActual > minIntervalMs && ++rachaExitos >= RACHA_PARA_ACELERAR) {
           rachaExitos = 0;
@@ -112,6 +137,7 @@ export function crearClienteSeace({
       } catch (err) {
         clearTimeout(timeout);
         if (err instanceof SeaceBloqueadoError) throw err; // no se reintenta un bloqueo
+        if (err?.demasiadoGrande) throw err; // reintentar no lo hace más chico
         lastError = err;
         if (intento < retries) {
           await sleep(RETRY_DELAY_MS * (intento + 1));
@@ -134,6 +160,20 @@ export function crearClienteSeace({
       return fetchJsonConReintento(url);
     },
 
+    /**
+     * Lista los archivos de la categoría 1 ("Anexo de la contratación": las
+     * especificaciones técnicas / términos de referencia) de un contrato.
+     * Devuelve [{ idContratoArchivo, nombre, descripcionExtension, tamanio, ... }].
+     */
+    listarAnexos(idContrato) {
+      return fetchJsonConReintento(`${ARCHIVOS_URL}/listar-archivos-contrato/${Number(idContrato)}/1`);
+    },
+
+    /** Descarga un archivo de contrato y lo devuelve como Buffer. */
+    descargarArchivo(idContratoArchivo) {
+      return fetchJsonConReintento(`${ARCHIVOS_URL}/descargar-archivo-contrato/${Number(idContratoArchivo)}`, { binario: true });
+    },
+
     /** Trae el detalle completo (cabecera + etapas + items) de un contrato. */
     listarCompleto(idContrato) {
       const url = `${BASE_URL}/listar-completo?id_contrato=${idContrato}`;
@@ -147,5 +187,7 @@ export function crearClienteSeace({
 const clienteDefault = crearClienteSeace();
 export const buscarPagina = (args) => clienteDefault.buscarPagina(args);
 export const listarCompleto = (id) => clienteDefault.listarCompleto(id);
+export const listarAnexos = (id) => clienteDefault.listarAnexos(id);
+export const descargarArchivo = (id) => clienteDefault.descargarArchivo(id);
 
 export const seaceConfig = { BASE_URL, ANIO_FIJO, CODIGOS_OBJETO_SINCRONIZADOS, ESTADO_VIGENTE };

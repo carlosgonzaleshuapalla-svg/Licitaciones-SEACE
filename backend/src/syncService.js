@@ -1,5 +1,6 @@
 import * as clienteSeace from './seaceClient.js';
 import { cotizacionAbierta } from './fechas.js';
+import { detectarExperiencia } from './requisitos.js';
 import { SeaceBloqueadoError } from './seaceClient.js';
 import {
   upsertTenderHeader,
@@ -71,7 +72,15 @@ export function mapDetailToItemsAndEtapas(idContrato, detalle) {
     fin: et.fecFin ?? null,
   }));
 
-  return { items, etapas };
+  // La exigencia de experiencia solo aparece escrita en estos textos (ver requisitos.js).
+  const cab = detalle?.uitContratoCompletoProjection ?? {};
+  const experiencia = detectarExperiencia([
+    cab.desObjetoContrato,
+    cab.desJustifTipInvit,
+    ...(detalle?.uitContratoItemProjectionList ?? []).map((it) => it.descripcionItem),
+  ]);
+
+  return { items, etapas, experiencia };
 }
 
 /**
@@ -145,8 +154,8 @@ async function descargarDetalles(client, pendientes, log, pausasMs) {
       if (idContrato === undefined) return;
       try {
         const detalle = await client.listarCompleto(idContrato);
-        const { items, etapas } = mapDetailToItemsAndEtapas(idContrato, detalle);
-        replaceTenderDetail(idContrato, items, etapas);
+        const { items, etapas, experiencia } = mapDetailToItemsAndEtapas(idContrato, detalle);
+        replaceTenderDetail(idContrato, items, etapas, experiencia);
         sincronizados++;
         bloqueosSeguidos = 0;
       } catch (err) {
