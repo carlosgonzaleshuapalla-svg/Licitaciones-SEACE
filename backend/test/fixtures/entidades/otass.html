@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Convocatorias</title>
+        <link rel="shortcut icon" href="https://8uit.otass.gob.pe/images/favicon-sbn.png " type="image/x-icon" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="description" content="">
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css?family=Gothic+A1" rel="stylesheet">
+        <link href="https://8uit.otass.gob.pe/portalweb/css/style.css" rel="stylesheet" type="text/css" media="all" />
+        <meta name="csrf-token" content="HinWdLoa5aKPRRBfccMjMA3xLlUhotURHBtZ69Qt">
+        <script>
+            var local = {
+                base: "https://8uit.otass.gob.pe",
+                user: ""
+            }
+        </script>
+        <script src="https://www.google.com/recaptcha/api.js?render=6LeEYlsoAAAAAGV6oUavF7BMnnlMpajmpub4yJ0c"></script><script>
+                    var csrfToken = document.head.querySelector('meta[name="csrf-token"]');
+                  grecaptcha.ready(function() {
+                      grecaptcha.execute('6LeEYlsoAAAAAGV6oUavF7BMnnlMpajmpub4yJ0c', {action: 'register8UITS'}).then(function(token) {
+                        
+                fetch('/biscolab-recaptcha/validate?token=' + token, {
+                    headers: {
+                        "X-Requested-With": "XMLHttpRequest",
+                        "X-CSRF-TOKEN": csrfToken.content
+                    }
+                })
+                .then(function(response) {
+                   	
+                })
+                .catch(function(err) {
+                    
+                });
+                      });
+                  });
+		     </script>
+    </head>
+
+  <body>
+
+    <div class="layout layout-nav-side">
+        <div class="navbar navbar-expand-lg bg-dark navbar-dark sticky-top">
+            <a class="navbar-brand" href="https://8uit.otass.gob.pe/portal">
+                <img alt="OTASS" src="https://8uit.otass.gob.pe/portalweb/images/logo_otass_white.png" style="width: 153px;margin-left: 22px;"/><br><br>
+                <img alt="8UITS" src="https://8uit.otass.gob.pe/portalweb/images/compras.svg" style="width: 100%"/>
+            </a>
+            <div class="d-flex align-items-center">
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-collapse" aria-controls="navbar-collapse" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="d-block d-lg-none ml-2">
+                    <div class="dropdown">
+                        <a href="#" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right">
+                            <a href="https://8uit.otass.gob.pe/portal/logout" class="dropdown-item">Salir</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collapse navbar-collapse flex-column" id="navbar-collapse">
+                                                <hr>
+                <div class="d-none d-lg-block w-100">
+                    <ul class="nav nav-small flex-column mt-1">
+                        <li class="nav-item">
+                            <a href="#" id="register-btn" class="nav-link">Registrar</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" id="login-btn" class="nav-link">Iniciar sesión</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="https://8uit.otass.gob.pe/portal/centro-ayuda" id="centro-btn" class="nav-link">Cambiar contraseña</a>
+                        </li>
+                    </ul>
+                    <hr>
+                </div>
+                                <div class="d-none d-lg-block w-100">
+                    <ul class="nav nav-small flex-column mt-1">
+                        <li class="nav-item">
+                            <img alt="OTASS" src="https://8uit.otass.gob.pe/portalweb/images/agua_o_nunca3.jpg" style="width: 100%"/>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+                    </div>
+
+        <div class="main-container">
+            <div class="navbar bg-white breadcrumb-bar">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="index.html">Lista de Requerimientos</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Activos</li>
+                        <li></li>
+                        <li></li>
+                        <li class="breadcrumb-item active" aria-current="page" style="padding-left: 740px">
+                            <a href="https://8uit.otass.gob.pe/portal/centro-ayuda" class="btn btn-primary btn-sm">
+                                <i class="fa fa-calendar-check-o"></i> Cambiar contraseña
+                            </a>
+                            <a href="https://8uit.otass.gob.pe/MANUAL-DE-PROVEEDOR-DE-8UIT.pdf" target="_blank" class="btn btn-danger btn-sm" style="margin-left:10px">
+                                <i class="fa fa-calendar-check-o"></i> Manual de Usuario
+                            </a>
+                        </li>
+                    </ol>
+                </nav>
+            </div>
+
+            <div class="container">
+                <div class="row justify-content-center">
+                    
+    <link href="https://8uit.otass.gob.pe/css/select2.min.css" rel="stylesheet" />
+    <link href="https://8uit.otass.gob.pe/css/estilos.css" rel="stylesheet" />
+    <script src="https://8uit.otass.gob.pe/js/select2.min.js"></script>
+
+
+    <div class="col-lg-11 col-xl-12">
+
+        <div class="page-header">
+            <h1><i class="material-icons" style="">reorder</i> Requerimientos</h1>
+            <p class="lead">Lista de requerimientos del OTASS</p>
+        </div>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="tasks" role="tabpanel" data-filter-list="card-list-body">
+                <div class="content-list-body">
+                    <div class="card-list">
+                        <div class="card-list-head">
+                            <div class="dropdown">
+                            </div>
+                        </div>
+                        <div class="card-list-body">
+                            
+                                
+                                                                        <div class="card card-task">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 100%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="card-title">
+                                                    <a href="#">
+                                                        <h6 data-filter-by="text" style="margin-bottom: 12px;"><i class="material-icons iconos" style="">queue_play_next</i> Servicios: SERVICIO DE MANTENIMIENTO PREVENTIVO Y CORRECTIVO DE SISTEMA DE DETECCIÓN Y ALARMA CONTRA INCENDIO EN LAS OFICINAS DEL OTASS (29869)</h6>
+                                                    </a>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">date_range</i> Fecha de vencimiento: </strong>2026-11-20 15:30 pm</span>
+                                                    <br>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">swap_horiz</i> Falta: </strong> 0 días</span>
+                                                    <div style="margin-right: 10%">
+                                                        <a href="https://8uit.otass.gob.pe/../storage/files2/tdr-mantenimiento-sist-deteccion-y-alarma-final-1795022669.pdf" target="_blank" class="btn" data-toggle="tooltip" data-placement="right" title="Términos de referencia" ><i class="material-icons" style="margin: 0;" alt="Postular">description</i></a>
+                                                    </div>
+                                                </div>
+                                                <div class="card-meta">
+                                                                                                                                                                                                                    <button class="btn btn-round-postula abrirModal"  alt="Postular" data-convocatoria="2585">
+                                                            <i class="material-icons" style="margin: 0;" alt="Postular">sync_disabled</i> Registrar
+                                                        </button>
+                                                                                                                                                        </div>
+                                            </div>
+                                        </div>
+                                                            
+                                
+                                                                        <div class="card card-task">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 90%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="card-title">
+                                                    <a href="#">
+                                                        <h6 data-filter-by="text" style="margin-bottom: 12px;"><i class="material-icons iconos" style="">queue_play_next</i> Servicios: SERVICIO DE INVENTARIO FíSICO DE BIENES MUEBLES PATRIMONIALES DEL ORGANISMO TéCNICO DE ADMINISTRACIóN DE LOS SERVICIOS DE SANEAMIENTO OTASS, VALORIZADO, CONCILIADO Y REGISTRADO EN EL SIGA  MEF MóDULO PATRIMONIO Y MóDULO MUEBLES SINABIP AL 31 DE DICIEMBRE DE 2026 (30080)</h6>
+                                                    </a>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">date_range</i> Fecha de vencimiento: </strong>2026-11-23 10:00 am</span>
+                                                    <br>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">swap_horiz</i> Falta: </strong> 3 días</span>
+                                                    <div style="margin-right: 10%">
+                                                        <a href="https://8uit.otass.gob.pe/../storage/files2/tdr-serv-inventario-bmp-al-31-dic-2026-otass-validado-1795030159.pdf" target="_blank" class="btn" data-toggle="tooltip" data-placement="right" title="Términos de referencia" ><i class="material-icons" style="margin: 0;" alt="Postular">description</i></a>
+                                                    </div>
+                                                </div>
+                                                <div class="card-meta">
+                                                                                                                                                                                                                    <button class="btn btn-round-postula abrirModal"  alt="Postular" data-convocatoria="2586">
+                                                            <i class="material-icons" style="margin: 0;" alt="Postular">sync_disabled</i> Registrar
+                                                        </button>
+                                                                                                                                                        </div>
+                                            </div>
+                                        </div>
+                                                            
+                                
+                                                                        <div class="card card-task">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 100%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="card-title">
+                                                    <a href="#">
+                                                        <h6 data-filter-by="text" style="margin-bottom: 12px;"><i class="material-icons iconos" style="">queue_play_next</i> Servicios: RENOVACION DE SUSCRIPCION DE LICENCIA DE SOFTWARE DE SALA DE VIDEOCONFERENCIA</h6>
+                                                    </a>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">date_range</i> Fecha de vencimiento: </strong>2026-11-20 10:00 am</span>
+                                                    <br>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">swap_horiz</i> Falta: </strong> 0 días</span>
+                                                    <div style="margin-right: 10%">
+                                                        <a href="https://8uit.otass.gob.pe/../storage/files2/tdr-renovacion-suscripcion-licencia-software-videoconferencia-2026-f-1795103347.pdf" target="_blank" class="btn" data-toggle="tooltip" data-placement="right" title="Términos de referencia" ><i class="material-icons" style="margin: 0;" alt="Postular">description</i></a>
+                                                    </div>
+                                                </div>
+                                                <div class="card-meta">
+                                                                                                                                                                                                                    <button class="btn btn-round-postula abrirModal"  alt="Postular" data-convocatoria="2588">
+                                                            <i class="material-icons" style="margin: 0;" alt="Postular">sync_disabled</i> Registrar
+                                                        </button>
+                                                                                                                                                        </div>
+                                            </div>
+                                        </div>
+                                                            
+                                
+                                                                        <div class="card card-task">
+                                            <div class="progress">
+                                                <div class="progress-bar bg-danger" role="progressbar" style="width: 100%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                                            </div>
+                                            <div class="card-body">
+                                                <div class="card-title">
+                                                    <a href="#">
+                                                        <h6 data-filter-by="text" style="margin-bottom: 12px;"><i class="material-icons iconos" style="">queue_play_next</i> Servicios: SERVICIO ESPECIALIZADO EN GESTIóN COMERCIAL PARA LA ACTUALIZACIóN DE PROPUESTA DEL PLAN DE REFLOTAMIENTO DE LA EPS EMAPA CAÑETE S.A. Y
+EPS EMAPAB S.A.</h6>
+                                                    </a>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">date_range</i> Fecha de vencimiento: </strong>2026-11-20 08:30 am</span>
+                                                    <br>
+                                                    <span class="text-small"><strong><i class="material-icons iconos" style="">swap_horiz</i> Falta: </strong> 0 días</span>
+                                                    <div style="margin-right: 10%">
+                                                        <a href="https://8uit.otass.gob.pe/../storage/files2/tdr-especialista-comercial-1795186113.pdf" target="_blank" class="btn" data-toggle="tooltip" data-placement="right" title="Términos de referencia" ><i class="material-icons" style="margin: 0;" alt="Postular">description</i></a>
+                                                    </div>
+                                                </div>
+                                                <div class="card-meta">
+                                                                                                                                                                                                                    <button class="btn btn-round-postula abrirModal"  alt="Postular" data-convocatoria="2589">
+                                                            <i class="material-icons" style="margin: 0;" alt="Postular">sync_disabled</i> Registrar
+                                                        </button>
+                                                                                                                                                        </div>
+                                            </div>
+                                        </div>
+                                                                                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="task-add-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Postulación</h5>
+                        <button type="button" class="close btn btn-round" data-dismiss="modal" aria-label="Close">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+
+                    <ul class="nav nav-tabs nav-fill" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="task-add-details-tab" data-toggle="tab" href="#task-add-details" role="tab" aria-controls="task-add-details" aria-selected="true">Iniciar Sesiòn</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link " id="task-add-members-tab" data-toggle="tab" href="#task-add-members" role="tab" aria-controls="task-add-members" aria-selected="false">Registrarse</a>
+                        </li>
+                    </ul>
+                    <div class="modal-body">
+                        <div class="tab-content">
+                            <div class="tab-pane fade active show" id="task-add-details" role="tabpanel">
+                                <form action="https://8uit.otass.gob.pe/portal/login" method="POST" id="frmLogin">
+                                    <div class="tab-pane fade show active" id="task-add-details" role="tabpanel">
+                                        <hr>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Email</label>
+                                            <input class="form-control col" type="email" placeholder="" name="username" required/>
+                                        </div>
+                                        <div class="form-group row">
+                                            <label class="col-3">Contraseña</label>
+                                            <input class="form-control col" type="password" placeholder="" name="password" required />
+                                        </div>
+                                        <hr>
+                                        <button role="button" class="btn btn-primary" type="submit" style="display: flex;">
+                                            <i class="material-icons" style="font-size: 20px;margin-top: 2px;margin-right: 10px;">done</i> Entrar
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="tab-pane fade  " id="task-add-members" role="tabpanel">
+                                <div class="users-manage" data-filter-list="form-group-users">
+                                    <form action="https://8uit.otass.gob.pe/portal/crear-proveedor" method="POST" id="frmProveedor">
+                                        <h6>Datos del registro</h6>
+                                        <hr>
+                                        <input type="hidden" name="_token" value="HinWdLoa5aKPRRBfccMjMA3xLlUhotURHBtZ69Qt">
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">RUC</label>
+                                            <input class="form-control col" type="number" onKeyDown="if(this.value.length==11 && event.keyCode!=8) return false;" onKeyPress="return soloNumeros(event)" placeholder="" name="ruc" id="ruc1" data-id="1" data-ids="20" required>
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Razón Social</label>
+                                            <input type="hidden" value="1" name="medio">
+                                            <input class="form-control col" type="text" placeholder="" name="razon_social0" id="razon_social1" required disabled>
+                                            <input class="form-control col" type="hidden" placeholder="" name="razon_social" id="razon_social20">
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">RNP</label>
+                                            <input class="form-control col" type="text" placeholder="" name="rnp" required>
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Email</label>
+                                            <input class="form-control col" type="email" placeholder="" name="email" required>
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Telefono</label>
+                                            <input class="form-control col" type="number" maxlength="9" onKeyDown="if(this.value.length==9 && event.keyCode!=8) return false;" name="telefono" required>
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Persona Contacto</label>
+                                            <input class="form-control col" type="text" placeholder="" name="pcontacto" required>
+                                        </div>
+                                        <div class="form-group row align-items-center">
+                                            <label class="col-3">Grupo</label>
+
+                                            <select class="form-control col" name="grupo" required>
+                                                <option>[Seleccione]</option>
+                                                                                                    <option value="5">SERVICIO DE MANTENIMIENTO DE IMPRESORAS</option>
+                                                                                                    <option value="6">SERVICIOS GENERALES</option>
+                                                                                                    <option value="7">REPUESTOS Y ACCESORIOS INFORMÁTICOS</option>
+                                                                                                    <option value="8">MUDANZA</option>
+                                                                                                    <option value="9">AIRE ACONDICIONADO Y REFRIGERACIÓN</option>
+                                                                                                    <option value="10">IMPLEMENTOS DEPORTIVOS</option>
+                                                                                                    <option value="11">VESTUARIO, INDUMENTARIA</option>
+                                                                                                    <option value="12">PRODUCTOS FARMACEUTICOS</option>
+                                                                                                    <option value="13">SERVICIO DE MANTENIMIENTO DE VEHICULOS</option>
+                                                                                                    <option value="16">SERVICIOS INFORMÁTICOS</option>
+                                                                                                    <option value="18">SERVICIOS LEGALES</option>
+                                                                                                    <option value="20">SERVICIOS DE INGENIERIA SANITARIA</option>
+                                                                                                    <option value="22">SERVICIOS GENERALES</option>
+                                                                                                    <option value="23">SERVICIO DE ANÁLISIS Y EVALUACIÓN DE INVERSIONES</option>
+                                                                                                    <option value="24">CONTROL PATRIMONIAL Y ALMACEN</option>
+                                                                                                    <option value="25">SERVICIO EN GESTIÓN ADMINISTRATIVA</option>
+                                                                                                    <option value="26">COFFE BREAK - ALIMENTACION</option>
+                                                                                                    <option value="27">SERVICIO ESPECIALIZADO EN CONTABILIDAD</option>
+                                                                                                    <option value="28">SERVICIO DE FORMULACION DE PLANES DE INTERVENCION A CENTROS POBLADOS</option>
+                                                                                                    <option value="29">ACONDICIONAMIENTO, ADECUACION, MANTENIMIENTO DE AMBIENTES.</option>
+                                                                                                    <option value="30">ESPECIALISTA EN CONTRATACIONES</option>
+                                                                                                    <option value="31">ASISTENTE ADMINISTRATIVO</option>
+                                                                                                    <option value="32">SERVICIOS DE COMUNICACIONES</option>
+                                                                                                    <option value="33">SERVICIO CABLEADO ESTRUCTURADO</option>
+                                                                                                    <option value="34">SERVICIO DE ASISTENCIA EN ANÁLISIS DE INFORMACIÓN</option>
+                                                                                                    <option value="35">SERVICIO DE SEGUIMIENTO A LAS ACCIONES EN MATERIA DE INTEGRIDAD INSTITUCIONAL éTICA Y ANTICORRUPCIóN.</option>
+                                                                                                    <option value="36">SERVICIO DE EVALUACIÓN</option>
+                                                                                                    <option value="37">ESPECIALISTA EN EJECUCION CONTRACTUAL</option>
+                                                                                                    <option value="38">SERVICIO ESPECIALIZADO EN MATERIA LEGAL</option>
+                                                                                                    <option value="39">SERVICIOS GENERALES</option>
+                                                                                                    <option value="40">SERVICIOS VARIOS</option>
+                                                                                                    <option value="41">SERVICIO DE ELABORACIÓN, EDICIÓN, COORDINACIÓN Y ENVÍO DE NOTAS DE PRENSA</option>
+                                                                                                    <option value="42">SERVICIO DE COMUNICACIÓN, DIFUSIÓN, DIVULGACIÓN E IMAGEN</option>
+                                                                                                    <option value="43">SERVICIO DE ELABORACIÓN DE MATERIAL GRÁFICO Y AUDIOVISUAL</option>
+                                                                                                    <option value="44">SERVICIO DE ASISTENCIA Y REVISION LEGAL DE DOCUMENTOS</option>
+                                                                                                    <option value="45">ALIMENTOS Y BEBIDAS</option>
+                                                                                                    <option value="46">SERVICIO DE RECARGA Y MANTENIMIENTO DE EXTINTORES</option>
+                                                                                                    <option value="47">SERVICIO DE GESTIÓN SOCIAL</option>
+                                                                                                    <option value="48">SERVICIO DE MONITOREO</option>
+                                                                                                    <option value="49">SERVICIO DE CONSOLIDACIÓN Y ANÁLISIS DE INFORMACIÓN</option>
+                                                                                                    <option value="50">GESTION DE LA INCORPORACION DE PERSONAL</option>
+                                                                                                    <option value="51">ASISTENCIA EN DOCUMENTOS ADMINISTRATIVOS</option>
+                                                                                                    <option value="52">ESPECIALISTA EN RECURSOS HUMANOS</option>
+                                                                                                    <option value="53">SERVICIO DE SENSIBILIZACION EN IMPLEMENTACION EN GESTION DEL CAMBIO</option>
+                                                                                                    <option value="54">HARDWARE Y SOFTWARE</option>
+                                                                                                    <option value="56">IMPRESIONES, BANNER, FLYER Y OTROS</option>
+                                                                                                    <option value="57">COMBUSTIBLE</option>
+                                                                                                    <option value="58">SERVICIO DE ASISTENCIA ARCHIVÍSTICA</option>
+                                                                                                    <option value="59">SERVICIO DE LUCHA CONTRA LA CORRUPCIÓN</option>
+                                                                                                    <option value="60">EVENTOS</option>
+                                                                                                    <option value="61">VENTA CORTINA</option>
+                                                                                                    <option value="62">ASISTENCIA TECNICA EN GESTION Y PLANIFICACION</option>
+                                                                                                    <option value="63">SERVICIO DE MANTENIMIENTO DE CAMIONES HIDROJETS</option>
+                                                                                                    <option value="64">INGENIERIA EN GESTION OPERACIONAL</option>
+                                                                                                    <option value="65">GESTION COMERCIAL</option>
+                                                                                                    <option value="66">INGENIERIA DE SISTEMAS</option>
+                                                                                                    <option value="67">PROCESAMIENTO DE INFORMACION</option>
+                                                                                                    <option value="68">SERVICIO DE RECOLECCIóN Y SISTEMATIZACIóN DE INFORMACIóN</option>
+                                                                                                    <option value="69">SERVICIO DE TRANSCRIPCIóN, CORRECCIóN Y EDICIóN DE TEXTOS</option>
+                                                                                                    <option value="70">INGENIERIA SANITARIA</option>
+                                                                                                    <option value="71">ABOGADOS</option>
+                                                                                                    <option value="72">CAPACITACION ADMINISTRATIVA</option>
+                                                                                                    <option value="73">ANALISIS DE GESTION POR PROCESOS</option>
+                                                                                                    <option value="74">GESTION PRESUPUESTAL</option>
+                                                                                                    <option value="75">SERVICIO DE MOTORIZADO PARA TRASLADO DE DOCUMENTOS</option>
+                                                                                                    <option value="76">SERVICIO DE MODERNIZACIÓN</option>
+                                                                                                    <option value="77">SERVICIOS ESPECIALIZADO EN PROCEDIMIENTO ADMINISTRATIVO DISCIPLINARIO</option>
+                                                                                                    <option value="78">SERVICIO DE SEGUIMIENTO Y MONITOREO DE LA COOPERACIóN INTERNACIONAL</option>
+                                                                                                    <option value="79">INCORPORACIÓN DE PERSONAL EN EL PROCESO DE SELECCIÓN</option>
+                                                                                                    <option value="80">SERVICIO DE ORGANIZACION DE EVENTOS</option>
+                                                                                                    <option value="81">MARCHANDISES</option>
+                                                                                                    <option value="82">SERVICIO EN GESTIÓN DE LA INCORPORACIÓN DE PERSONAL EN EL PROCESO DE SELECCIÓN</option>
+                                                                                                    <option value="83">SERVICIO DE SEGUIMIENTO A LAS ACCIONES EN MATERIA DE INTEGRIDAD INSTITUCIONAL Y DEL SISTEMA DE CONTROL INTERNO</option>
+                                                                                                    <option value="84">SERVICIO DE ASISTENCIA TÉCNICA EN INGENIERIA</option>
+                                                                                                    <option value="85">SERVICIO DE ASISTENCIA ECONOMICA Y FINANCIERA</option>
+                                                                                                    <option value="86">SOPORTE TECNICO Y RENOVACIÓN DEL CLIENTE DE FIRMA DIGITAL WEB</option>
+                                                                                                    <option value="87">SERVICIO DE RENOVACION DE CERTIFICADOS DE SEGURIDAD DIGITAL SSL PARA LOS SERVICIOS WEB DEL OTASS</option>
+                                                                                                    <option value="88">SERVICIO ESPECIALIZADO EN GOBERNABILIDAD Y RELACIONES INTERINSTITUCIONALES</option>
+                                                                                                    <option value="89">MODERADOR</option>
+                                                                                                    <option value="90">EQUIPOS GPS</option>
+                                                                                                    <option value="91">MANTENIMIENTO DE MOBILIARIO</option>
+                                                                                                    <option value="92">VERIFICACION DOCUMENTARIO</option>
+                                                                                                    <option value="93">INVENTARIO</option>
+                                                                                                    <option value="94">SERVICIO DE ANÁLISIS Y EVALUACIÓN DE RESULTADOS</option>
+                                                                                                    <option value="95">GESTION ADMINSTRATIVA Y FINANCIERA</option>
+                                                                                                    <option value="96">SERVICIO DE ASISTENCIA TECNICA EN COMUNICACIONES</option>
+                                                                                                    <option value="97">SERVICIO DE MENSAJERIA</option>
+                                                                                                    <option value="98">CONTRATACIóN DEL &quot;SERVICIO DE ANáLISIS Y EVALUACIóN DE RESULTADOS DE FICHAS TéCNICAS</option>
+                                                                                                    <option value="101">SERVICIO ESPECIALIZADO EN MATERIA LEGAL PARA BRINDAR ASISTENCIA TéCNICA A LAS EPS EN RAT EN TEMAS DE SANEAMIENTO</option>
+                                                                                                    <option value="102">SERVICIO DE IMPLEMENTACIÓN DEL SISTEMA DE GESTIÓN DE SEGURIDAD DE LA INFORMACIÓN</option>
+                                                                                                    <option value="103">ELECTROMECANICO</option>
+                                                                                                    <option value="104">INGENIERIA INDUSTRIAL</option>
+                                                                                                    <option value="105">INGENIERIA INDUSTRIAL</option>
+                                                                                                    <option value="106">SERVICIO DE INGENIERÍA</option>
+                                                                                                    <option value="107">SERVICIO EN GESTIÓN PUBLICA</option>
+                                                                                                    <option value="108">LICENCIAS ANTISPAM</option>
+                                                                                                    <option value="109">SERVICIO DE PRESUPUESTO E INVERSIONES</option>
+                                                                                                    <option value="110">SERVICIO DE GESTION DE MONITOREO</option>
+                                                                                                    <option value="111">ASISTENCIA TECNICA Y SUPERVISION</option>
+                                                                                                    <option value="112">ADQUISICION DE HERRAMIENTAS</option>
+                                                                                                    <option value="113">SERVICIO DE SISTEMATIZACIÓN Y ANALISIS DE LA INFORMACIÓN</option>
+                                                                                                    <option value="114">SERVICIO DE ENSAYOS DE PROSPECCION GEOFISICA</option>
+                                                                                                    <option value="115">TALLER DE INTEGRACION</option>
+                                                                                                    <option value="116">SERVICIO DE ORIENTACION EN TRAMITE ADMINISTRATIVO</option>
+                                                                                                    <option value="117">SISTEMAS ELECTRICOS</option>
+                                                                                                    <option value="118">CORREDORES DE SEGUROS</option>
+                                                                                                    <option value="119">VENTA DE BATERIAS PARA VEHICULOS</option>
+                                                                                                    <option value="120">SERVICIO DE RECOPILACIóN DE INFORMACIóN</option>
+                                                                                                    <option value="121">SERVICIO DE AUDITORÍA AL SGSI</option>
+                                                                                                    <option value="122">DESARROLLADOR DE SOFTWARE</option>
+                                                                                                    <option value="123">SERVICIO DE ELABORACIÓN DE INSTRUMENTO DE GESTIÓN</option>
+                                                                                                    <option value="124">SWITCH</option>
+                                                                                                    <option value="125">SERVICIO DE SUPERVISION</option>
+                                                                                                    <option value="126">SERVICIO ESPECIALIZADO EN TEMAS DE INFORMACION GEOGRAFICA Y GEOREFERENCIADA</option>
+                                                                                                    <option value="127">GESTION DE RIESGO Y DESASTRE</option>
+                                                                                                    <option value="128">JAVIER RICARDO QUISPE CASTRO</option>
+                                                                                                    <option value="129">GESTION DE RIESGO Y DESASTRE</option>
+                                                                                                    <option value="130">SERVICIOS CONTABLES</option>
+                                                                                                    <option value="131">SERVICIO DE ANáLISIS Y SEGUIMIENTO ADMINISTRATIVO Y PRESUPUESTAL</option>
+                                                                                                    <option value="132">BIENES DIVERSOS</option>
+                                                                                                    <option value="133">EXAMEN MEDICO</option>
+                                                                                                    <option value="134">SERVICIO DE ANáLISIS Y EVALUACIóN DE PLANEAMIENTO ESTRATéGICO Y MODERNIZACIóN</option>
+                                                                                                    <option value="135">SERVICIO DE SEGUIMIENTO Y MONITOREO DE ACTIVIDADES PRIORIZADAS DE LAS EPS NO RAT</option>
+                                                                                                    <option value="136">SERVICIO PARA EL ANÁLISIS Y EVALUACIÓN DE LA IMPLEMENTACIÓN DE LOS VALORES MÁXIMOS ADMISIBLES (VMA) Y CALIDAD DE AGUA POTABLE DISTRIBUIDA EN 18 EPS, UE002 Y GRAU S.A.</option>
+                                                                                                    <option value="137">SERVICIOS ESPECIALIZADOS DE UN(A) PROFESIONAL EN MATERIA DE INVERSIONES, PARA LA OFICINA DE PLANEAMIENTO, PRESUPUESTO Y MODERNIZACIóN (OPPM)</option>
+                                                                                                    <option value="138">SERVICIO DE MUDANZA</option>
+                                                                                                    <option value="139">TALLER EN SEGURIDAD Y SALUD EN EL TRABAJO</option>
+                                                                                                    <option value="140">MANTENIMIENTO SISTEMA CONTRA INCENDIO</option>
+                                                                                                    <option value="141">SERVICIO DE SEGUIMIENTO Y ASISTENCIA EN LA GESTIóN DE ACTIVIDADES OPERATIVAS.</option>
+                                                                                                    <option value="142">ADQUISICION DE MOBILIARIO</option>
+                                                                                                    <option value="143">SERVICIO DE IDENTIFICACIÓN DE INFORMACIÓN PARA EL DISEÑO DE ESTRATEGIAS DE GESTIÓN SOCIAL</option>
+                                                                                                    <option value="144">SERVICIO DE ELABORACIÓN DE FICHA TÉCNICA</option>
+                                                                                                    <option value="145">SERVICIO PARA LA ASISTENCIA TéCNICA EN LA CULMINACIóN DE EJECUCIóN Y LIQUIDACIóN DE LAS FICHAS TéCNICAS FINANCIADA POR OTASS A EPS NO RAT</option>
+                                                                                                    <option value="146">SERVICIO DE ANÁLISIS, RECOPILACIÓN DE INFORMACIÓN Y ELABORACIÓN DE PROPUESTA DE DOCUMENTOS  ZONA 5</option>
+                                                                                                    <option value="147">SERVICIO DEL DESARROLLO DEL DIAGNÓSTICO OPERACIONAL DE LOS SISTEMAS DE AGUA POTABLE Y SANEAMIENTO DE LA RECOPILACIÓN DE INFORMACIÓN RECOGIDA DE LAS EPS YO CENTROS POBLADOS.</option>
+                                                                                                    <option value="148">SERVICIO DE ANÁLISIS, RECOPILACIÓN DE INFORMACIÓN Y ELABORACIÓN DE PROPUESTA DE DOCUMENTOS ZONA 5</option>
+                                                                                                    <option value="149">SERVICIO ASISTENCIA TéCNICA EN CONTABILIDAD PARA LAS EPS EN RAT&quot;</option>
+                                                                                                    <option value="150">SERVICIO DE ASISTENCIA TéCNICA EN CONTABILIDAD PARA LAS EPS EN RAT</option>
+                                                                                                    <option value="151">FOTOGRAFIA</option>
+                                                                                                    <option value="152">FOTOGRAFIA</option>
+                                                                                                    <option value="153">ADQUISICIÓN DE ENGRASADORA NEUMÁTICA PARA 20 CAMIONES HIDROJET</option>
+                                                                                                    <option value="154">SERVICIO ESPECIALIZADO EN ESTRUCTURAS COSTOS Y PRESUPUESTO</option>
+                                                                                                    <option value="155">SERVICIO DE INGENIERIA GEOGRAFICA</option>
+                                                                                                    <option value="156">BIENES INFORMATICOS</option>
+                                                                                                    <option value="157">SERVICIO DE TASADOR</option>
+                                                                                                    <option value="158">EQUIPO DE COMPUTO, PERIFERICOS Y ACCESORIOS</option>
+                                                                                                    <option value="159">EQUIPO BIOMETRICO</option>
+                                                                                                    <option value="160">SERVICIO DE GESTIÓN VERIFICACIÓN Y SEGUIMIENTO ANTISOBORNO</option>
+                                                                                                    <option value="161">SEGURIDAD Y VIGILANCIA</option>
+                                                                                                    <option value="162">SERVICIO DE ASISTENCIA TECNICA EN PTAP</option>
+                                                                                                    <option value="164">CONTRATACIóN DE SERVICIOS ESPECIALIZADOS DE UN(A) PROFESIONAL EN FORMULACIóN Y EVALUACIóN DE INVERSIONES</option>
+                                                                                                    <option value="165">SERVICIO DE SISTEMATIZACIÓN Y ANALISIS DE INFORMACIÓN</option>
+                                                                                                    <option value="166">SSERVICIO DE REVISIÓN Y ANÁLISIS DE INFORMACIÓN PARA LA ELABORACIÓN DEL DIAGNÓSTICO OPERACIONAL DEL SISTEMA DE AGUA POTABLE Y SANEAMIENTO DE LA REGIÓN LORETO</option>
+                                                                                                    <option value="167">SERVICIO DE GEOSESIA Y FOTOGRAMETRIA</option>
+                                                                                                    <option value="168">ALQUILER DE PANTALLA LED</option>
+                                                                                                    <option value="169">SEGUROS</option>
+                                                                                                    <option value="170">SERVICIO DE UN ESPECIALISTA EN ACUERDO MARCO</option>
+                                                                                                    <option value="171">SERVICIO DE ASISTENCIA Y SEGUIMIENTO EN TEMAS DE CLIMA LABORAL Y CULTURA ORGANIZACIONAL</option>
+                                                                                                    <option value="173">SERVICIO DE ASISTENCIA Y SEGUIMIENTO EN TEMAS DE CLIMA LABORAL</option>
+                                                                                                    <option value="174">AUDITORIA</option>
+                                                                                                    <option value="175">SERVICIO DE AUDITORIA</option>
+                                                                                                    <option value="176">SERVICIO DE CONTROL PREVIO</option>
+                                                                                                    <option value="177">DIESEL Y GASOLINA</option>
+                                                                                                    <option value="178">SERVICIO DE COORDINACION MONITOREO Y ASISTENCIA TECNICA ADMINISTRATIVA</option>
+                                                                                                    <option value="179">ARQUITECTOS</option>
+                                                                                                    <option value="180">SERVICIO DE ESPECIALIZADO EN INGENIERíA SANITARIA PARA LA SUBDIRECCIóN DE PLANIFICACIóN DE LA GESTIóN DE LAS EPS</option>
+                                                                                                    <option value="181">SUSCRIPCION ANUAL A LICENCIA DE SOFTWARE</option>
+                                                                                                    <option value="182">SERVICIO DE SEGUIMIENTO Y MANTENIMIENTO DEL SISTEMA DE GESTIÓN ANTISOBORNO</option>
+                                                                                                    <option value="183">SERVICIO ESPECIALIZADO EN RACIONALIZACIÓN Y MODERNIZACIÓN DE LA GESTIÓN PUBLICA</option>
+                                                                                                    <option value="184">SERVICIO ESPECIALIZADO EN PLANEAMIENTO ESTRATÉGICO</option>
+                                                                                                    <option value="185">SERVICIO DE ASISTENCIA TECNICA EN AGUA Y SANEAMIENTO</option>
+                                                                                                    <option value="186">CONDUCCION</option>
+                                                                                                    <option value="187">CONFLICTOS SOCIALES</option>
+                                                                                                    <option value="188">INGENIERO CIVIL</option>
+                                                                                                    <option value="189">SERVICIO ESPECIALIZADO DE INGENIERÍA EN ESTRUCTURAS</option>
+                                                                                                    <option value="190">SUSCRIPCION DE HERRAMIENTAS DIGITALES</option>
+                                                                                                    <option value="191">TRASLADO DE PERSONAAS</option>
+                                                                                                    <option value="192">ENSERES</option>
+                                                                                                    <option value="193">SERVICIO DE SEGUIMIENTO Y MONITOREO DE LA IMPLEMENTACION Y EJECUCIÓN</option>
+                                                                                                    <option value="194">SERVICIO ESPECIALIZADO EN GESTION DE INVERSIONES</option>
+                                                                                                    <option value="195">SERVICIO DE ANALISIS DE INFORMACION ECONOMICA Y FINANCIERA</option>
+                                                                                                    <option value="196">SERVICIO DE LIMPIEZA</option>
+                                                                                                    <option value="197">ALARMA CONTRAINCENDIOS</option>
+                                                                                                    <option value="198">SERVICIO DE MONITOREO DE INDICADORES Y PROCESOS OPERATIVOS</option>
+                                                                                                    <option value="199">SERVICIO DE MONITOREO DE UNIDADES VEHICULARES</option>
+                                                                                                    <option value="200">SERVICIO DE TRANSFORMACIÓN DIGITAL</option>
+                                                                                                    <option value="201">SERVICIO DE ELABORACIÓN DE MATRIZ</option>
+                                                                                                    <option value="202">SERVICIO DE ASISTENCIA TÉCNICA Y ELABORACIÓN DE LA PROPUESTA MODIFICATORIA DE DOCUMENTO NORMATIVO</option>
+                                                                                                    <option value="203">ALQUILER DE STAND</option>
+                                                                                                    <option value="204">SERVICIO DE ASISTENCIA TECNICA FINANCIERA</option>
+                                                                                                    <option value="205">SERVICIO ESPECIALIZADO EN ANÁLISIS ECONÓMICO Y FINANCIERO</option>
+                                                                                                    <option value="206">CAPACIATACION</option>
+                                                                                                    <option value="207">ORGANIZACION EVENTOS  ADMINISTRATIVOS</option>
+                                                                                                    <option value="208">ORGANIZACION</option>
+                                                                                                    <option value="209">SERVICIO DE SEGUIMIENTO Y MONITOREO ESPECIALIZADO</option>
+                                                                                                    <option value="210">SERVICIO DE DIAGNOSTICO Y EJECUCIÓN DE ACCIONES</option>
+                                                                                                    <option value="211">TEMAS PARLAMENTARIOS</option>
+                                                                                                    <option value="212">TV CABLE</option>
+                                                                                                    <option value="213">ELABORACION DE PROPUESTAS TECNICAS</option>
+                                                                                                    <option value="214">SERVICIO DE ASISTENCIA TÉCNICA PARA EL ANÁLISIS DE INFORMACIÓN Y PROCESAMIENTO DE DATOS</option>
+                                                                                                    <option value="215">SERVICIO DE COOPERACION INTERNACIONAL</option>
+                                                                                                    <option value="216">SERVICIO DE GESTION DE INTERVENCION SOCIAL</option>
+                                                                                                    <option value="217">SERVICIO ESPECIALIZADO EN PROCESO DE IMPLEMENTACIÓN DEL SERVICIO CIVIL</option>
+                                                                                                    <option value="218">SERVICIO DE IMPLEMENTACIóN DEL SISTEMA DE CONTROL INTERNO</option>
+                                                                                                    <option value="219">SERVICIO DE COORDINACION</option>
+                                                                                                    <option value="220">SERVICIO ESPECIALIZADO EN GESTIÓN DE INVERSIONES PÊBLICAS</option>
+                                                                                                    <option value="221">SERVICIO ESPECIALIZADO EN DISEÑO Y DIAGRAMACIÓN DE DOCUMENTOS</option>
+                                                                                                    <option value="222">SERVICIO ESPECIALIZADO DE INGENIERÍA CIVL</option>
+                                                                                                    <option value="223">SERVICIO DE DISEÑO Y DIAGRAMACIÓN</option>
+                                                                                                    <option value="224">SERVICIO ESPECIALIZADO EN INGENIERIA ELECTROMECANICA</option>
+                                                                                                    <option value="225">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option value="226">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option value="227">SERVICIO EN DISEÑO Y DIAGRAMACIÓN</option>
+                                                                                                    <option value="228">SERVICIO DE GESTIÓN DOCUMENTARIA, MEJORA DE ATENCIÓN AL USUARIO Y ORDENAMIENTO DE DOCUMENTOS DE ARCHIVO</option>
+                                                                                                    <option value="229">SERVICIO DE ASISTENCIA TECNICA EN LE MARCO DEL FEN</option>
+                                                                                                    <option value="230">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option value="231">HOTEL</option>
+                                                                                                    <option value="232">SERVICIO ESPECIALIZADO DE ASISTENCIA ECONÓMICA FINANCIERA</option>
+                                                                                                    <option value="233">SERVICIO ESPECIALIZADO EN GESTIÓN ADMINISTRATIVA Y DE CONTRATACIONES</option>
+                                                                                            </select>
+                                        </div>
+                                        <hr>
+                                        <!-- <a href="#" class="btn btn-primary" style="display: flex;"></a> -->
+                                        <button role="button" class="btn btn-primary" id="registrar" type="submit" style="display: flex;">
+                                            <i class="material-icons" style="font-size: 20px;margin-top: 2px;margin-right: 10px;">save</i> Registrar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="login-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Ingresar</h5>
+                        <button type="button" class="close btn btn-round" data-dismiss="modal" aria-label="Close">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                    <ul class="nav nav-tabs nav-fill" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="task-add-members-tab" data-toggle="tab" href="#task-add-members" role="tab" aria-controls="task-add-members" aria-selected="false">Acceso</a>
+                        </li>
+                    </ul>
+                    <div class="modal-body">
+                        <div class="tab-content">
+                            <form action="https://8uit.otass.gob.pe/portal/login" method="POST" id="frmLogin">
+                                <div class="tab-pane fade show active" id="task-add-details" role="tabpanel">
+                                    <hr>
+                                    <div class="form-group row align-items-center">
+                                        <label class="col-3">Email</label>
+                                        <input class="form-control col" type="text" placeholder="" name="username" />
+                                    </div>
+                                    <div class="form-group row">
+                                        <label class="col-3">Contraseña</label>
+                                        <input class="form-control col" type="password" placeholder="" name="password" />
+                                    </div>
+                                    <hr>
+                                    <button
+                                        role="button"
+                                        class="btn btn-primary"
+                                        type="submit"
+                                        style="display: flex;"
+                                    >
+                                        <i class="material-icons" style="font-size: 20px;margin-top: 2px;margin-right: 10px;">done</i> Entrar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="modal fade" id="register-modal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Registro</h5>
+                        <button type="button" class="close btn btn-round" data-dismiss="modal" aria-label="Close">
+                            <i class="material-icons">close</i>
+                        </button>
+                    </div>
+                    <ul class="nav nav-tabs nav-fill" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="task-add-members-tab" data-toggle="tab" href="#task-add-members" role="tab" aria-controls="task-add-members" aria-selected="false">Proveedores</a>
+                        </li>
+                    </ul>
+                    <div class="modal-body">
+                        <div class="tab-content">
+                            <form action="https://8uit.otass.gob.pe/portal/crear-proveedor" method="POST" id="frmProveedor">
+                                <h6>Datos del registro</h6>
+                                <hr>
+                                <input type="hidden" name="_token" value="HinWdLoa5aKPRRBfccMjMA3xLlUhotURHBtZ69Qt">
+                                <div class="form-group row align-items-center">
+                                    <label class="col-3">RUC</label>
+                                    <input class="form-control col" type="number" onKeyDown="if(this.value.length==11 && event.keyCode!=8) return false;" onKeyPress="return soloNumeros(event)" placeholder="" name="ruc" id="ruc2" data-id="1" data-ids="20" required>
+                                </div>
+                                <div class="form-group row align-items-center">
+                                    <label class="col-3">Razón Social</label>
+                                    <input type="hidden" value="2" name="medio">
+                                    <!--<input class="form-control col" type="text" placeholder="" name="razon_social" required> -->
+
+                                    <input class="form-control col" type="text" placeholder="" name="razon_social5" id="razon_social2" required disabled>
+                                    <input class="form-control col" type="hidden" placeholder="" name="razon_social" id="razon_social3">
+                                </div>
+                                <div class="form-group row align-items-center">
+                                    <label for="fecha" class="col-3">Email</label>
+
+                                        <input class="form-control col" type="text" placeholder="" name="email" required>
+
+                                </div>
+                                <div class="form-group row align-items-center">
+                                    <label class="col-3">RNP</label>
+                                    <select name="rnp" id="rnp" class="form-control col">
+                                        <option value="">:: SELECCIONE OPCIÓN ::</option>
+                                        <option value="SI">SI</option>
+                                        <option value="NO">NO</option>
+                                    </select>
+                                    
+                                </div>
+                                <div class="form-group row align-items-center">
+                                    <label for="fecha" class="col-3">Email 2:</label>
+                                        <input type="text" class="form-control col" name="cco">
+                                </div>
+
+                                <div class="form-group row align-items-center">
+                                    <label class="col-3">Telefono 1</label>
+                                    <input class="form-control col" type="number" maxlength="9" onKeyDown="if(this.value.length==9 && event.keyCode!=8) return false;" name="telefono" required>
+                                </div>
+                                <div class="form-group row align-items-center">
+                                    <label for="fecha" class="col-md-3">Teléfono 2:</label>
+                                        <input type="text" class="form-control col" name="telefono2" onKeyPress="return soloNumeros(event)">
+                                </div>
+
+                                <div class="form-group row align-items-center">
+                                    <label class="col-3">Persona Contacto</label>
+                                    <input class="form-control col" type="text" placeholder="" name="pcontacto" required>
+                                </div>
+                                <div class="form-group">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <label for="fecha">Grupo:</label>
+                                        </div>
+                                        <div class="col-12">
+                                            <select class="form-control js-single" multiple="multiple"
+                                                data-placeholder="Seleccione" style="width: 100%;" name="grupo[]"
+                                                >
+                                                                                                    <option style="color: white" value="5">SERVICIO DE MANTENIMIENTO DE IMPRESORAS</option>
+                                                                                                    <option style="color: white" value="6">SERVICIOS GENERALES</option>
+                                                                                                    <option style="color: white" value="7">REPUESTOS Y ACCESORIOS INFORMÁTICOS</option>
+                                                                                                    <option style="color: white" value="8">MUDANZA</option>
+                                                                                                    <option style="color: white" value="9">AIRE ACONDICIONADO Y REFRIGERACIÓN</option>
+                                                                                                    <option style="color: white" value="10">IMPLEMENTOS DEPORTIVOS</option>
+                                                                                                    <option style="color: white" value="11">VESTUARIO, INDUMENTARIA</option>
+                                                                                                    <option style="color: white" value="12">PRODUCTOS FARMACEUTICOS</option>
+                                                                                                    <option style="color: white" value="13">SERVICIO DE MANTENIMIENTO DE VEHICULOS</option>
+                                                                                                    <option style="color: white" value="16">SERVICIOS INFORMÁTICOS</option>
+                                                                                                    <option style="color: white" value="18">SERVICIOS LEGALES</option>
+                                                                                                    <option style="color: white" value="20">SERVICIOS DE INGENIERIA SANITARIA</option>
+                                                                                                    <option style="color: white" value="22">SERVICIOS GENERALES</option>
+                                                                                                    <option style="color: white" value="23">SERVICIO DE ANÁLISIS Y EVALUACIÓN DE INVERSIONES</option>
+                                                                                                    <option style="color: white" value="24">CONTROL PATRIMONIAL Y ALMACEN</option>
+                                                                                                    <option style="color: white" value="25">SERVICIO EN GESTIÓN ADMINISTRATIVA</option>
+                                                                                                    <option style="color: white" value="26">COFFE BREAK - ALIMENTACION</option>
+                                                                                                    <option style="color: white" value="27">SERVICIO ESPECIALIZADO EN CONTABILIDAD</option>
+                                                                                                    <option style="color: white" value="28">SERVICIO DE FORMULACION DE PLANES DE INTERVENCION A CENTROS POBLADOS</option>
+                                                                                                    <option style="color: white" value="29">ACONDICIONAMIENTO, ADECUACION, MANTENIMIENTO DE AMBIENTES.</option>
+                                                                                                    <option style="color: white" value="30">ESPECIALISTA EN CONTRATACIONES</option>
+                                                                                                    <option style="color: white" value="31">ASISTENTE ADMINISTRATIVO</option>
+                                                                                                    <option style="color: white" value="32">SERVICIOS DE COMUNICACIONES</option>
+                                                                                                    <option style="color: white" value="33">SERVICIO CABLEADO ESTRUCTURADO</option>
+                                                                                                    <option style="color: white" value="34">SERVICIO DE ASISTENCIA EN ANÁLISIS DE INFORMACIÓN</option>
+                                                                                                    <option style="color: white" value="35">SERVICIO DE SEGUIMIENTO A LAS ACCIONES EN MATERIA DE INTEGRIDAD INSTITUCIONAL éTICA Y ANTICORRUPCIóN.</option>
+                                                                                                    <option style="color: white" value="36">SERVICIO DE EVALUACIÓN</option>
+                                                                                                    <option style="color: white" value="37">ESPECIALISTA EN EJECUCION CONTRACTUAL</option>
+                                                                                                    <option style="color: white" value="38">SERVICIO ESPECIALIZADO EN MATERIA LEGAL</option>
+                                                                                                    <option style="color: white" value="39">SERVICIOS GENERALES</option>
+                                                                                                    <option style="color: white" value="40">SERVICIOS VARIOS</option>
+                                                                                                    <option style="color: white" value="41">SERVICIO DE ELABORACIÓN, EDICIÓN, COORDINACIÓN Y ENVÍO DE NOTAS DE PRENSA</option>
+                                                                                                    <option style="color: white" value="42">SERVICIO DE COMUNICACIÓN, DIFUSIÓN, DIVULGACIÓN E IMAGEN</option>
+                                                                                                    <option style="color: white" value="43">SERVICIO DE ELABORACIÓN DE MATERIAL GRÁFICO Y AUDIOVISUAL</option>
+                                                                                                    <option style="color: white" value="44">SERVICIO DE ASISTENCIA Y REVISION LEGAL DE DOCUMENTOS</option>
+                                                                                                    <option style="color: white" value="45">ALIMENTOS Y BEBIDAS</option>
+                                                                                                    <option style="color: white" value="46">SERVICIO DE RECARGA Y MANTENIMIENTO DE EXTINTORES</option>
+                                                                                                    <option style="color: white" value="47">SERVICIO DE GESTIÓN SOCIAL</option>
+                                                                                                    <option style="color: white" value="48">SERVICIO DE MONITOREO</option>
+                                                                                                    <option style="color: white" value="49">SERVICIO DE CONSOLIDACIÓN Y ANÁLISIS DE INFORMACIÓN</option>
+                                                                                                    <option style="color: white" value="50">GESTION DE LA INCORPORACION DE PERSONAL</option>
+                                                                                                    <option style="color: white" value="51">ASISTENCIA EN DOCUMENTOS ADMINISTRATIVOS</option>
+                                                                                                    <option style="color: white" value="52">ESPECIALISTA EN RECURSOS HUMANOS</option>
+                                                                                                    <option style="color: white" value="53">SERVICIO DE SENSIBILIZACION EN IMPLEMENTACION EN GESTION DEL CAMBIO</option>
+                                                                                                    <option style="color: white" value="54">HARDWARE Y SOFTWARE</option>
+                                                                                                    <option style="color: white" value="56">IMPRESIONES, BANNER, FLYER Y OTROS</option>
+                                                                                                    <option style="color: white" value="57">COMBUSTIBLE</option>
+                                                                                                    <option style="color: white" value="58">SERVICIO DE ASISTENCIA ARCHIVÍSTICA</option>
+                                                                                                    <option style="color: white" value="59">SERVICIO DE LUCHA CONTRA LA CORRUPCIÓN</option>
+                                                                                                    <option style="color: white" value="60">EVENTOS</option>
+                                                                                                    <option style="color: white" value="61">VENTA CORTINA</option>
+                                                                                                    <option style="color: white" value="62">ASISTENCIA TECNICA EN GESTION Y PLANIFICACION</option>
+                                                                                                    <option style="color: white" value="63">SERVICIO DE MANTENIMIENTO DE CAMIONES HIDROJETS</option>
+                                                                                                    <option style="color: white" value="64">INGENIERIA EN GESTION OPERACIONAL</option>
+                                                                                                    <option style="color: white" value="65">GESTION COMERCIAL</option>
+                                                                                                    <option style="color: white" value="66">INGENIERIA DE SISTEMAS</option>
+                                                                                                    <option style="color: white" value="67">PROCESAMIENTO DE INFORMACION</option>
+                                                                                                    <option style="color: white" value="68">SERVICIO DE RECOLECCIóN Y SISTEMATIZACIóN DE INFORMACIóN</option>
+                                                                                                    <option style="color: white" value="69">SERVICIO DE TRANSCRIPCIóN, CORRECCIóN Y EDICIóN DE TEXTOS</option>
+                                                                                                    <option style="color: white" value="70">INGENIERIA SANITARIA</option>
+                                                                                                    <option style="color: white" value="71">ABOGADOS</option>
+                                                                                                    <option style="color: white" value="72">CAPACITACION ADMINISTRATIVA</option>
+                                                                                                    <option style="color: white" value="73">ANALISIS DE GESTION POR PROCESOS</option>
+                                                                                                    <option style="color: white" value="74">GESTION PRESUPUESTAL</option>
+                                                                                                    <option style="color: white" value="75">SERVICIO DE MOTORIZADO PARA TRASLADO DE DOCUMENTOS</option>
+                                                                                                    <option style="color: white" value="76">SERVICIO DE MODERNIZACIÓN</option>
+                                                                                                    <option style="color: white" value="77">SERVICIOS ESPECIALIZADO EN PROCEDIMIENTO ADMINISTRATIVO DISCIPLINARIO</option>
+                                                                                                    <option style="color: white" value="78">SERVICIO DE SEGUIMIENTO Y MONITOREO DE LA COOPERACIóN INTERNACIONAL</option>
+                                                                                                    <option style="color: white" value="79">INCORPORACIÓN DE PERSONAL EN EL PROCESO DE SELECCIÓN</option>
+                                                                                                    <option style="color: white" value="80">SERVICIO DE ORGANIZACION DE EVENTOS</option>
+                                                                                                    <option style="color: white" value="81">MARCHANDISES</option>
+                                                                                                    <option style="color: white" value="82">SERVICIO EN GESTIÓN DE LA INCORPORACIÓN DE PERSONAL EN EL PROCESO DE SELECCIÓN</option>
+                                                                                                    <option style="color: white" value="83">SERVICIO DE SEGUIMIENTO A LAS ACCIONES EN MATERIA DE INTEGRIDAD INSTITUCIONAL Y DEL SISTEMA DE CONTROL INTERNO</option>
+                                                                                                    <option style="color: white" value="84">SERVICIO DE ASISTENCIA TÉCNICA EN INGENIERIA</option>
+                                                                                                    <option style="color: white" value="85">SERVICIO DE ASISTENCIA ECONOMICA Y FINANCIERA</option>
+                                                                                                    <option style="color: white" value="86">SOPORTE TECNICO Y RENOVACIÓN DEL CLIENTE DE FIRMA DIGITAL WEB</option>
+                                                                                                    <option style="color: white" value="87">SERVICIO DE RENOVACION DE CERTIFICADOS DE SEGURIDAD DIGITAL SSL PARA LOS SERVICIOS WEB DEL OTASS</option>
+                                                                                                    <option style="color: white" value="88">SERVICIO ESPECIALIZADO EN GOBERNABILIDAD Y RELACIONES INTERINSTITUCIONALES</option>
+                                                                                                    <option style="color: white" value="89">MODERADOR</option>
+                                                                                                    <option style="color: white" value="90">EQUIPOS GPS</option>
+                                                                                                    <option style="color: white" value="91">MANTENIMIENTO DE MOBILIARIO</option>
+                                                                                                    <option style="color: white" value="92">VERIFICACION DOCUMENTARIO</option>
+                                                                                                    <option style="color: white" value="93">INVENTARIO</option>
+                                                                                                    <option style="color: white" value="94">SERVICIO DE ANÁLISIS Y EVALUACIÓN DE RESULTADOS</option>
+                                                                                                    <option style="color: white" value="95">GESTION ADMINSTRATIVA Y FINANCIERA</option>
+                                                                                                    <option style="color: white" value="96">SERVICIO DE ASISTENCIA TECNICA EN COMUNICACIONES</option>
+                                                                                                    <option style="color: white" value="97">SERVICIO DE MENSAJERIA</option>
+                                                                                                    <option style="color: white" value="98">CONTRATACIóN DEL &quot;SERVICIO DE ANáLISIS Y EVALUACIóN DE RESULTADOS DE FICHAS TéCNICAS</option>
+                                                                                                    <option style="color: white" value="101">SERVICIO ESPECIALIZADO EN MATERIA LEGAL PARA BRINDAR ASISTENCIA TéCNICA A LAS EPS EN RAT EN TEMAS DE SANEAMIENTO</option>
+                                                                                                    <option style="color: white" value="102">SERVICIO DE IMPLEMENTACIÓN DEL SISTEMA DE GESTIÓN DE SEGURIDAD DE LA INFORMACIÓN</option>
+                                                                                                    <option style="color: white" value="103">ELECTROMECANICO</option>
+                                                                                                    <option style="color: white" value="104">INGENIERIA INDUSTRIAL</option>
+                                                                                                    <option style="color: white" value="105">INGENIERIA INDUSTRIAL</option>
+                                                                                                    <option style="color: white" value="106">SERVICIO DE INGENIERÍA</option>
+                                                                                                    <option style="color: white" value="107">SERVICIO EN GESTIÓN PUBLICA</option>
+                                                                                                    <option style="color: white" value="108">LICENCIAS ANTISPAM</option>
+                                                                                                    <option style="color: white" value="109">SERVICIO DE PRESUPUESTO E INVERSIONES</option>
+                                                                                                    <option style="color: white" value="110">SERVICIO DE GESTION DE MONITOREO</option>
+                                                                                                    <option style="color: white" value="111">ASISTENCIA TECNICA Y SUPERVISION</option>
+                                                                                                    <option style="color: white" value="112">ADQUISICION DE HERRAMIENTAS</option>
+                                                                                                    <option style="color: white" value="113">SERVICIO DE SISTEMATIZACIÓN Y ANALISIS DE LA INFORMACIÓN</option>
+                                                                                                    <option style="color: white" value="114">SERVICIO DE ENSAYOS DE PROSPECCION GEOFISICA</option>
+                                                                                                    <option style="color: white" value="115">TALLER DE INTEGRACION</option>
+                                                                                                    <option style="color: white" value="116">SERVICIO DE ORIENTACION EN TRAMITE ADMINISTRATIVO</option>
+                                                                                                    <option style="color: white" value="117">SISTEMAS ELECTRICOS</option>
+                                                                                                    <option style="color: white" value="118">CORREDORES DE SEGUROS</option>
+                                                                                                    <option style="color: white" value="119">VENTA DE BATERIAS PARA VEHICULOS</option>
+                                                                                                    <option style="color: white" value="120">SERVICIO DE RECOPILACIóN DE INFORMACIóN</option>
+                                                                                                    <option style="color: white" value="121">SERVICIO DE AUDITORÍA AL SGSI</option>
+                                                                                                    <option style="color: white" value="122">DESARROLLADOR DE SOFTWARE</option>
+                                                                                                    <option style="color: white" value="123">SERVICIO DE ELABORACIÓN DE INSTRUMENTO DE GESTIÓN</option>
+                                                                                                    <option style="color: white" value="124">SWITCH</option>
+                                                                                                    <option style="color: white" value="125">SERVICIO DE SUPERVISION</option>
+                                                                                                    <option style="color: white" value="126">SERVICIO ESPECIALIZADO EN TEMAS DE INFORMACION GEOGRAFICA Y GEOREFERENCIADA</option>
+                                                                                                    <option style="color: white" value="127">GESTION DE RIESGO Y DESASTRE</option>
+                                                                                                    <option style="color: white" value="128">JAVIER RICARDO QUISPE CASTRO</option>
+                                                                                                    <option style="color: white" value="129">GESTION DE RIESGO Y DESASTRE</option>
+                                                                                                    <option style="color: white" value="130">SERVICIOS CONTABLES</option>
+                                                                                                    <option style="color: white" value="131">SERVICIO DE ANáLISIS Y SEGUIMIENTO ADMINISTRATIVO Y PRESUPUESTAL</option>
+                                                                                                    <option style="color: white" value="132">BIENES DIVERSOS</option>
+                                                                                                    <option style="color: white" value="133">EXAMEN MEDICO</option>
+                                                                                                    <option style="color: white" value="134">SERVICIO DE ANáLISIS Y EVALUACIóN DE PLANEAMIENTO ESTRATéGICO Y MODERNIZACIóN</option>
+                                                                                                    <option style="color: white" value="135">SERVICIO DE SEGUIMIENTO Y MONITOREO DE ACTIVIDADES PRIORIZADAS DE LAS EPS NO RAT</option>
+                                                                                                    <option style="color: white" value="136">SERVICIO PARA EL ANÁLISIS Y EVALUACIÓN DE LA IMPLEMENTACIÓN DE LOS VALORES MÁXIMOS ADMISIBLES (VMA) Y CALIDAD DE AGUA POTABLE DISTRIBUIDA EN 18 EPS, UE002 Y GRAU S.A.</option>
+                                                                                                    <option style="color: white" value="137">SERVICIOS ESPECIALIZADOS DE UN(A) PROFESIONAL EN MATERIA DE INVERSIONES, PARA LA OFICINA DE PLANEAMIENTO, PRESUPUESTO Y MODERNIZACIóN (OPPM)</option>
+                                                                                                    <option style="color: white" value="138">SERVICIO DE MUDANZA</option>
+                                                                                                    <option style="color: white" value="139">TALLER EN SEGURIDAD Y SALUD EN EL TRABAJO</option>
+                                                                                                    <option style="color: white" value="140">MANTENIMIENTO SISTEMA CONTRA INCENDIO</option>
+                                                                                                    <option style="color: white" value="141">SERVICIO DE SEGUIMIENTO Y ASISTENCIA EN LA GESTIóN DE ACTIVIDADES OPERATIVAS.</option>
+                                                                                                    <option style="color: white" value="142">ADQUISICION DE MOBILIARIO</option>
+                                                                                                    <option style="color: white" value="143">SERVICIO DE IDENTIFICACIÓN DE INFORMACIÓN PARA EL DISEÑO DE ESTRATEGIAS DE GESTIÓN SOCIAL</option>
+                                                                                                    <option style="color: white" value="144">SERVICIO DE ELABORACIÓN DE FICHA TÉCNICA</option>
+                                                                                                    <option style="color: white" value="145">SERVICIO PARA LA ASISTENCIA TéCNICA EN LA CULMINACIóN DE EJECUCIóN Y LIQUIDACIóN DE LAS FICHAS TéCNICAS FINANCIADA POR OTASS A EPS NO RAT</option>
+                                                                                                    <option style="color: white" value="146">SERVICIO DE ANÁLISIS, RECOPILACIÓN DE INFORMACIÓN Y ELABORACIÓN DE PROPUESTA DE DOCUMENTOS  ZONA 5</option>
+                                                                                                    <option style="color: white" value="147">SERVICIO DEL DESARROLLO DEL DIAGNÓSTICO OPERACIONAL DE LOS SISTEMAS DE AGUA POTABLE Y SANEAMIENTO DE LA RECOPILACIÓN DE INFORMACIÓN RECOGIDA DE LAS EPS YO CENTROS POBLADOS.</option>
+                                                                                                    <option style="color: white" value="148">SERVICIO DE ANÁLISIS, RECOPILACIÓN DE INFORMACIÓN Y ELABORACIÓN DE PROPUESTA DE DOCUMENTOS ZONA 5</option>
+                                                                                                    <option style="color: white" value="149">SERVICIO ASISTENCIA TéCNICA EN CONTABILIDAD PARA LAS EPS EN RAT&quot;</option>
+                                                                                                    <option style="color: white" value="150">SERVICIO DE ASISTENCIA TéCNICA EN CONTABILIDAD PARA LAS EPS EN RAT</option>
+                                                                                                    <option style="color: white" value="151">FOTOGRAFIA</option>
+                                                                                                    <option style="color: white" value="152">FOTOGRAFIA</option>
+                                                                                                    <option style="color: white" value="153">ADQUISICIÓN DE ENGRASADORA NEUMÁTICA PARA 20 CAMIONES HIDROJET</option>
+                                                                                                    <option style="color: white" value="154">SERVICIO ESPECIALIZADO EN ESTRUCTURAS COSTOS Y PRESUPUESTO</option>
+                                                                                                    <option style="color: white" value="155">SERVICIO DE INGENIERIA GEOGRAFICA</option>
+                                                                                                    <option style="color: white" value="156">BIENES INFORMATICOS</option>
+                                                                                                    <option style="color: white" value="157">SERVICIO DE TASADOR</option>
+                                                                                                    <option style="color: white" value="158">EQUIPO DE COMPUTO, PERIFERICOS Y ACCESORIOS</option>
+                                                                                                    <option style="color: white" value="159">EQUIPO BIOMETRICO</option>
+                                                                                                    <option style="color: white" value="160">SERVICIO DE GESTIÓN VERIFICACIÓN Y SEGUIMIENTO ANTISOBORNO</option>
+                                                                                                    <option style="color: white" value="161">SEGURIDAD Y VIGILANCIA</option>
+                                                                                                    <option style="color: white" value="162">SERVICIO DE ASISTENCIA TECNICA EN PTAP</option>
+                                                                                                    <option style="color: white" value="164">CONTRATACIóN DE SERVICIOS ESPECIALIZADOS DE UN(A) PROFESIONAL EN FORMULACIóN Y EVALUACIóN DE INVERSIONES</option>
+                                                                                                    <option style="color: white" value="165">SERVICIO DE SISTEMATIZACIÓN Y ANALISIS DE INFORMACIÓN</option>
+                                                                                                    <option style="color: white" value="166">SSERVICIO DE REVISIÓN Y ANÁLISIS DE INFORMACIÓN PARA LA ELABORACIÓN DEL DIAGNÓSTICO OPERACIONAL DEL SISTEMA DE AGUA POTABLE Y SANEAMIENTO DE LA REGIÓN LORETO</option>
+                                                                                                    <option style="color: white" value="167">SERVICIO DE GEOSESIA Y FOTOGRAMETRIA</option>
+                                                                                                    <option style="color: white" value="168">ALQUILER DE PANTALLA LED</option>
+                                                                                                    <option style="color: white" value="169">SEGUROS</option>
+                                                                                                    <option style="color: white" value="170">SERVICIO DE UN ESPECIALISTA EN ACUERDO MARCO</option>
+                                                                                                    <option style="color: white" value="171">SERVICIO DE ASISTENCIA Y SEGUIMIENTO EN TEMAS DE CLIMA LABORAL Y CULTURA ORGANIZACIONAL</option>
+                                                                                                    <option style="color: white" value="173">SERVICIO DE ASISTENCIA Y SEGUIMIENTO EN TEMAS DE CLIMA LABORAL</option>
+                                                                                                    <option style="color: white" value="174">AUDITORIA</option>
+                                                                                                    <option style="color: white" value="175">SERVICIO DE AUDITORIA</option>
+                                                                                                    <option style="color: white" value="176">SERVICIO DE CONTROL PREVIO</option>
+                                                                                                    <option style="color: white" value="177">DIESEL Y GASOLINA</option>
+                                                                                                    <option style="color: white" value="178">SERVICIO DE COORDINACION MONITOREO Y ASISTENCIA TECNICA ADMINISTRATIVA</option>
+                                                                                                    <option style="color: white" value="179">ARQUITECTOS</option>
+                                                                                                    <option style="color: white" value="180">SERVICIO DE ESPECIALIZADO EN INGENIERíA SANITARIA PARA LA SUBDIRECCIóN DE PLANIFICACIóN DE LA GESTIóN DE LAS EPS</option>
+                                                                                                    <option style="color: white" value="181">SUSCRIPCION ANUAL A LICENCIA DE SOFTWARE</option>
+                                                                                                    <option style="color: white" value="182">SERVICIO DE SEGUIMIENTO Y MANTENIMIENTO DEL SISTEMA DE GESTIÓN ANTISOBORNO</option>
+                                                                                                    <option style="color: white" value="183">SERVICIO ESPECIALIZADO EN RACIONALIZACIÓN Y MODERNIZACIÓN DE LA GESTIÓN PUBLICA</option>
+                                                                                                    <option style="color: white" value="184">SERVICIO ESPECIALIZADO EN PLANEAMIENTO ESTRATÉGICO</option>
+                                                                                                    <option style="color: white" value="185">SERVICIO DE ASISTENCIA TECNICA EN AGUA Y SANEAMIENTO</option>
+                                                                                                    <option style="color: white" value="186">CONDUCCION</option>
+                                                                                                    <option style="color: white" value="187">CONFLICTOS SOCIALES</option>
+                                                                                                    <option style="color: white" value="188">INGENIERO CIVIL</option>
+                                                                                                    <option style="color: white" value="189">SERVICIO ESPECIALIZADO DE INGENIERÍA EN ESTRUCTURAS</option>
+                                                                                                    <option style="color: white" value="190">SUSCRIPCION DE HERRAMIENTAS DIGITALES</option>
+                                                                                                    <option style="color: white" value="191">TRASLADO DE PERSONAAS</option>
+                                                                                                    <option style="color: white" value="192">ENSERES</option>
+                                                                                                    <option style="color: white" value="193">SERVICIO DE SEGUIMIENTO Y MONITOREO DE LA IMPLEMENTACION Y EJECUCIÓN</option>
+                                                                                                    <option style="color: white" value="194">SERVICIO ESPECIALIZADO EN GESTION DE INVERSIONES</option>
+                                                                                                    <option style="color: white" value="195">SERVICIO DE ANALISIS DE INFORMACION ECONOMICA Y FINANCIERA</option>
+                                                                                                    <option style="color: white" value="196">SERVICIO DE LIMPIEZA</option>
+                                                                                                    <option style="color: white" value="197">ALARMA CONTRAINCENDIOS</option>
+                                                                                                    <option style="color: white" value="198">SERVICIO DE MONITOREO DE INDICADORES Y PROCESOS OPERATIVOS</option>
+                                                                                                    <option style="color: white" value="199">SERVICIO DE MONITOREO DE UNIDADES VEHICULARES</option>
+                                                                                                    <option style="color: white" value="200">SERVICIO DE TRANSFORMACIÓN DIGITAL</option>
+                                                                                                    <option style="color: white" value="201">SERVICIO DE ELABORACIÓN DE MATRIZ</option>
+                                                                                                    <option style="color: white" value="202">SERVICIO DE ASISTENCIA TÉCNICA Y ELABORACIÓN DE LA PROPUESTA MODIFICATORIA DE DOCUMENTO NORMATIVO</option>
+                                                                                                    <option style="color: white" value="203">ALQUILER DE STAND</option>
+                                                                                                    <option style="color: white" value="204">SERVICIO DE ASISTENCIA TECNICA FINANCIERA</option>
+                                                                                                    <option style="color: white" value="205">SERVICIO ESPECIALIZADO EN ANÁLISIS ECONÓMICO Y FINANCIERO</option>
+                                                                                                    <option style="color: white" value="206">CAPACIATACION</option>
+                                                                                                    <option style="color: white" value="207">ORGANIZACION EVENTOS  ADMINISTRATIVOS</option>
+                                                                                                    <option style="color: white" value="208">ORGANIZACION</option>
+                                                                                                    <option style="color: white" value="209">SERVICIO DE SEGUIMIENTO Y MONITOREO ESPECIALIZADO</option>
+                                                                                                    <option style="color: white" value="210">SERVICIO DE DIAGNOSTICO Y EJECUCIÓN DE ACCIONES</option>
+                                                                                                    <option style="color: white" value="211">TEMAS PARLAMENTARIOS</option>
+                                                                                                    <option style="color: white" value="212">TV CABLE</option>
+                                                                                                    <option style="color: white" value="213">ELABORACION DE PROPUESTAS TECNICAS</option>
+                                                                                                    <option style="color: white" value="214">SERVICIO DE ASISTENCIA TÉCNICA PARA EL ANÁLISIS DE INFORMACIÓN Y PROCESAMIENTO DE DATOS</option>
+                                                                                                    <option style="color: white" value="215">SERVICIO DE COOPERACION INTERNACIONAL</option>
+                                                                                                    <option style="color: white" value="216">SERVICIO DE GESTION DE INTERVENCION SOCIAL</option>
+                                                                                                    <option style="color: white" value="217">SERVICIO ESPECIALIZADO EN PROCESO DE IMPLEMENTACIÓN DEL SERVICIO CIVIL</option>
+                                                                                                    <option style="color: white" value="218">SERVICIO DE IMPLEMENTACIóN DEL SISTEMA DE CONTROL INTERNO</option>
+                                                                                                    <option style="color: white" value="219">SERVICIO DE COORDINACION</option>
+                                                                                                    <option style="color: white" value="220">SERVICIO ESPECIALIZADO EN GESTIÓN DE INVERSIONES PÊBLICAS</option>
+                                                                                                    <option style="color: white" value="221">SERVICIO ESPECIALIZADO EN DISEÑO Y DIAGRAMACIÓN DE DOCUMENTOS</option>
+                                                                                                    <option style="color: white" value="222">SERVICIO ESPECIALIZADO DE INGENIERÍA CIVL</option>
+                                                                                                    <option style="color: white" value="223">SERVICIO DE DISEÑO Y DIAGRAMACIÓN</option>
+                                                                                                    <option style="color: white" value="224">SERVICIO ESPECIALIZADO EN INGENIERIA ELECTROMECANICA</option>
+                                                                                                    <option style="color: white" value="225">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option style="color: white" value="226">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option style="color: white" value="227">SERVICIO EN DISEÑO Y DIAGRAMACIÓN</option>
+                                                                                                    <option style="color: white" value="228">SERVICIO DE GESTIÓN DOCUMENTARIA, MEJORA DE ATENCIÓN AL USUARIO Y ORDENAMIENTO DE DOCUMENTOS DE ARCHIVO</option>
+                                                                                                    <option style="color: white" value="229">SERVICIO DE ASISTENCIA TECNICA EN LE MARCO DEL FEN</option>
+                                                                                                    <option style="color: white" value="230">SERVICIO DE COORDINACION Y ASISTENCIA TECNICA</option>
+                                                                                                    <option style="color: white" value="231">HOTEL</option>
+                                                                                                    <option style="color: white" value="232">SERVICIO ESPECIALIZADO DE ASISTENCIA ECONÓMICA FINANCIERA</option>
+                                                                                                    <option style="color: white" value="233">SERVICIO ESPECIALIZADO EN GESTIÓN ADMINISTRATIVA Y DE CONTRATACIONES</option>
+                                                                                            </select>
+                                        </div>
+                                    </div>
+
+                                    
+                                </div>
+
+                                
+                                <hr>
+                                <!-- <a href="#" class="btn btn-primary" style="display: flex;"></a> -->
+                                <button
+                                    role="button"
+                                    class="btn btn-primary"
+                                    id="registrar"
+                                    type="submit"
+                                    style="display: flex;"
+                                    class="g-recaptcha"
+                                >
+                                    <i class="material-icons" style="font-size: 20px;margin-top: 2px;margin-right: 10px;">save</i> Registrar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+    </div>
+
+    <script>
+         function soloNumeros(e){
+            var key = window.Event ? e.which : e.keyCode
+            return (key >= 48 && key <= 57)
+        }
+    </script>
+    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Required vendor scripts (Do not remove) -->
+    <script type="text/javascript" src="https://unpkg.com/jquery@~3.4.1"></script>
+    <script type="text/javascript" src="https://unpkg.com/popper.js@~1.15.0/dist/umd/popper.min.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/bootstrap@~4.3.1"></script>
+
+
+    <!-- Autosize - resizes textarea inputs as user types -->
+    <script type="text/javascript" src="https://unpkg.com/autosize@~4.0.2/dist/autosize.js"></script>
+    <!-- Flatpickr (calendar/date/time picker UI) -->
+    <script type="text/javascript" src="https://unpkg.com/flatpickr@~4.5.7/dist/flatpickr.min.js"></script>
+    <!-- Prism - displays formatted code boxes -->
+    <script type="text/javascript" src="https://unpkg.com/prismjs@~1.16.0/prism.js"></script>
+    <!-- Shopify Draggable - drag, drop and sort items on page -->
+    <script type="text/javascript" src="https://unpkg.com/@shopify/draggable@~1.0.0-beta.8/lib/draggable.bundle.legacy.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/@shopify/draggable@~1.0.0-beta.8/lib/plugins/swap-animation.js"></script>
+    <!-- Dropzone - drag and drop files onto the page for uploading -->
+    <script type="text/javascript" src="https://unpkg.com/dropzone@~5.5.1/dist/min/dropzone.min.js"></script>
+    <!-- List.js - filter list elements -->
+    <script type="text/javascript" src="https://unpkg.com/list.js@~1.5.0/dist/list.min.js"></script>
+
+    <!-- Required theme scripts (Do not remove) -->
+    <!-- <script type="text/javascript" src="assets/js/theme.js"></script> -->
+
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+    <!-- This appears in the demo only - demonstrates different layouts -->
+    <style type="text/css">
+      .layout-switcher{ position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(73px); color: #fff; transition: all .35s ease; background: #343a40; border-radius: .25rem .25rem 0 0; padding: .75rem; z-index: 999; }
+            .layout-switcher:not(:hover){ opacity: .95; }
+            .layout-switcher:not(:focus){ cursor: pointer; }
+            .layout-switcher-head{ font-size: .75rem; font-weight: 600; text-transform: uppercase; }
+            .layout-switcher-head i{ font-size: 1.25rem; transition: all .35s ease; }
+            .layout-switcher-body{ transition: all .55s ease; opacity: 0; padding-top: .75rem; transform: translateY(24px); text-align: center; }
+            .layout-switcher:focus{ opacity: 1; outline: none; transform: translateX(-50%) translateY(0); }
+            .layout-switcher:focus .layout-switcher-head i{ transform: rotateZ(180deg); opacity: 0; }
+            .layout-switcher:focus .layout-switcher-body{ opacity: 1; transform: translateY(0); }
+            .layout-switcher-option{ width: 72px; padding: .25rem; border: 2px solid rgba(255,255,255,0); display: inline-block; border-radius: 4px; transition: all .35s ease; }
+            .layout-switcher-option.active{ border-color: #007bff; }
+            .layout-switcher-icon{ width: 100%; border-radius: 4px; }
+            .layout-switcher-body:hover .layout-switcher-option:not(:hover){ opacity: .5; transform: scale(0.9); }
+            @media  all and (max-width: 990px){ .layout-switcher{ min-width: 250px; } }
+            @media  all and (max-width: 767px){ .layout-switcher{ display: none; } }
+
+            .iconos{
+                display: inline-block;vertical-align: text-bottom;font-size: 22px;
+            }
+            .loader {
+                position: fixed;
+                left: 0px;
+                top: 0px;
+                width: 100%;
+                height: 100%;
+                z-index: 9999;
+                background: 50% 50% no-repeat rgb(249,249,249);
+                opacity: .8;
+                text-align: center;
+                padding: 13%;
+            }
+
+            .loader2{
+                width: 100px;
+                height: 100px;
+                border-radius: 100%;
+                position: relative;
+                margin: 0 auto;
+            }
+
+            #loader-2 span{
+                display: inline-block;
+                width: 10px;
+                height: 10px;
+                border-radius: 100%;
+                background-color: #f3323b;
+                margin: 35px 5px;
+            }
+
+            #loader-2 span:nth-child(1){
+                animation: bounce 1s ease-in-out infinite;
+            }
+
+            #loader-2 span:nth-child(2){
+                animation: bounce 1s ease-in-out 0.33s infinite;
+            }
+
+            #loader-2 span:nth-child(3){
+                animation: bounce 1s ease-in-out 0.66s infinite;
+            }
+
+            @keyframes  bounce{
+                0%, 75%, 100%{
+                    -webkit-transform: translateY(0);
+                    -ms-transform: translateY(0);
+                    -o-transform: translateY(0);
+                    transform: translateY(0);
+                }
+
+                25%{
+                    -webkit-transform: translateY(-20px);
+                    -ms-transform: translateY(-20px);
+                    -o-transform: translateY(-20px);
+                    transform: translateY(-20px);
+                }
+            }
+    </style>
+    <div class="loader">
+        <img alt="OTASS" src="https://8uit.otass.gob.pe/portalweb/images/cargando.jpg"  style="width:57px">
+        <br>
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $(".loader").fadeOut("slow");
+
+        var convocatoriaSelect = "";
+        var user = '';
+
+        $(function () {
+                $('[data-toggle="tooltip"]').tooltip()
+
+            $(document).on('submit','#frmProveedor',function(e){
+                e.preventDefault();
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                let action = $(this).attr('action');
+                let serial = $(this).serialize();
+                serial += convocatoriaSelect;
+                // console.log($(this).serialize());
+                $.ajax({
+                    url: action,
+                    method:'post',
+                    dataType: 'json',
+                    data: serial,
+                    beforeSend:function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        console.log(data);
+                        $(".loader").fadeOut("slow");
+                        if(data.status == true){
+                            if(data.datos.error == true){
+                                let html = '';
+                                let msg = '';
+                                $(data.datos.mensaje).each(function(x,y){
+                                    if(y.ruc != undefined){
+                                        msg += ' - '+y.ruc[0]+',';
+                                    }
+                                    if(y.email != undefined){
+                                        msg += ' - '+y.email[0];
+                                    }
+                                    msg += ' '
+                                })
+                                swal("Problema", msg, "error")
+                            }else{
+                                $('#task-add-modal').modal('toggle');
+                                swal("Postulación registrada", "Su postulación se registró con exito!", "success")
+                                setTimeout(() => {
+                                    location.reload();
+                                }, 3000);
+                                // swal({
+                                //     title: "Postulación registrada",
+                                //     text: "Su postulación se registró con exito!",
+                                //     type: "success"
+                                // }, function(){
+                                // });
+                            }
+                        }
+
+                    }
+                });
+                return false;
+            });
+
+
+            /* NO LOGUEADO */
+            $(document).on('click','.enviarCodigoVerificacion',function(){
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                $.ajax({
+                    url: "https://8uit.otass.gob.pe/portal/enviarcorreocodigo-Verificacion2",
+                    method: 'post',
+                    //dataType: 'json',
+                    data: {'email': document.getElementById('correoelectronico1').value},
+                    beforeSend: function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+
+                        if (typeof data.errors !== 'undefined')
+                        {
+
+                            let html = '<div class="alert alert-danger"><h6>Por favor corrige los errores debajo:</h6>';
+                            $(data.errors).each(function(e,v){
+                                html += '<ul>';
+                                html += '<li>'+v.email+'</li></div>';
+                            });
+                            //console.log(html)
+                            $('#errores').html(html);
+                        }else{
+                            $('#errores').html('');
+                            $('#correoelectronico1').attr("readonly","readonly");
+                            $('#inputcodeverification').show();
+                            swal({
+                                title: "Código de verificación OTASS",
+                                text: "Verificar su correo electrónico para ver el código de verificación",
+                                icon: "success",
+                            });
+
+                            //$('#vistaUno').html('');
+                            //$('#vistaUno').html(data);
+                        }
+                        $(".loader").fadeOut("slow");
+
+                    }
+
+                })
+                return;
+            });
+
+            /* LOGUEADO */
+            $(document).on('click','.enviarCodigoVerificacion2',function(){
+                var session =
+                    {
+                        user: ""
+                    }
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                $.ajax({
+                    url: "https://8uit.otass.gob.pe/portal/enviarcorreocodigo-Verificacion",
+                    method: 'post',
+                    data: {'email': document.getElementById('email2').value},
+                    beforeSend: function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        $('#vistaUno').html('');
+                        $('#vistaUno').html(data);
+                        $(".loader").fadeOut("slow");
+
+                        if( session.user != ''){
+                            swal({
+                                title: "Codigo de verificacion OTASS",
+                                text: "Verificar su correo electronico para ver el codigo de verificacion",
+                                icon: "success",
+                            });
+                            $("#inputcodeverification").show();
+                        }else{
+                            $("#inputcodeverification").hide();
+                        }
+                    }
+
+                })
+                return;
+            });
+
+
+
+            /* VALIDAR CODIGO DE VERIFICADOR: SIGUIENTE */
+            $(document).on('click','.siguienteCodigoVerificador',function(){
+                var data =  {};
+                data.correoelectronico1 = document.getElementById('correoelectronico1').value;
+                data.codigoverificacion1 = document.getElementById('codigoverificacion1').value;
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                $.ajax({
+                    url: "https://8uit.otass.gob.pe/portal/confirmarcodigo-verificador",
+                    method: 'post',
+                    //dataType: 'json',
+                    data: data,
+                    beforeSend: function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        //console.log((data.errors));
+                        // return;
+                        if (typeof data.errors !== 'undefined')
+                        {
+                            let html = '<div class="alert alert-danger"><h6>Por favor corrige los errores debajo:</h6>';
+                            $(data.errors).each(function(e,v){
+                                html += '<ul>';
+                                    if (typeof v.correoelectronico1 !== 'undefined')
+                                    {
+                                        html += '<li>'+v.correoelectronico1+'</li>';
+                                    }
+                                    if (typeof v.codigoverificacion1 !== 'undefined')
+                                    {
+                                        html += '<li>'+v.codigoverificacion1+'</li>';
+                                    }
+                                    html += '</ul></div>'
+
+                            });
+                            $('#errores').html(html);
+                        }else{
+                            $('#vistaUno').html('');
+                            $('#vistaUno').html(data);
+                        }
+                        $(".loader").fadeOut("slow");
+
+
+                    }
+
+                })
+                return;
+            });
+
+
+
+
+            /* VALIDAR CONTRASENA */
+            $(document).on('click','.validarContrasena',function(){
+
+                var data =  {};
+                data.email2 = document.getElementById('email2').value;
+                data.passwordvalidating = document.getElementById('passwordvalidating').value;
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                $.ajax({
+                    url: "https://8uit.otass.gob.pe/portal/validar-Contrasena",
+                    method: 'post',
+                    //dataType: 'json',
+                    data: data,
+                    beforeSend: function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        //console.log((data.errors));
+                        // return;
+                        if (typeof data.errors !== 'undefined')
+                        {
+                            let html = '<div class="alert alert-danger"><h6>Por favor corrige los errores debajo:</h6>';
+                            $(data.errors).each(function(e,v){
+                                html += '<ul>';
+                                    if (typeof v.email2 !== 'undefined')
+                                    {
+                                        html += '<li>'+v.email2+'</li>';
+                                    }
+                                    if (typeof v.passwordvalidating !== 'undefined')
+                                    {
+                                        html += '<li>'+v.passwordvalidating+'</li>';
+                                    }
+                                    html += '</ul></div>'
+
+                            });
+                            //console.log(html)
+                            $('#errores').html(html);
+                        }else{
+                            $('#vistaUno').html('');
+                            $('#vistaUno').html(data);
+                        }
+                        $(".loader").fadeOut("slow");
+
+
+                    }
+
+                })
+                return;
+            });
+
+
+
+
+
+            /* RECUPERACION DE CUENTA */
+            $(document).on('click','.recuperacionCuenta',function(){
+                var data =  {};
+                data.password = document.getElementById('password').value;
+                data.password_confirmation = document.getElementById('password_confirmation').value;
+
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                $.ajax({
+                    url: "https://8uit.otass.gob.pe/portal/recuperacion-Cuenta",
+                    method: 'post',
+                    //dataType: 'json',
+                    data: data,
+                    beforeSend: function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        //console.log((data.errors));
+                        //return;
+                        if (typeof data.errors !== 'undefined')
+                        {
+                            let html = '<div class="alert alert-danger"><h6>Por favor corrige los errores debajo:</h6>';
+                            $(data.errors).each(function(e,v){
+                                html += '<ul>';
+                                    if (typeof v.password !== 'undefined')
+                                    {
+                                        html += '<li>'+v.password+'</li>';
+                                    }
+                                    if (typeof v.password_confirmation !== 'undefined')
+                                    {
+                                        html += '<li>'+v.password_confirmation+'</li>';
+                                    }
+                                    html += '</ul></div>'
+
+                            });
+                            //console.log(html)
+                            $('#errores').html(html);
+                        }else{
+                            $('#vistaUno').html('');
+                            $('#vistaUno').html(data);
+                        }
+                        $(".loader").fadeOut("slow");
+
+                    }
+
+                })
+                return;
+            });
+
+
+
+
+
+
+            $('.validarLogeo').on('click',function(){
+                $.ajax({
+                    url: 'https://8uit.otass.gob.pe/portal/crear-convocatoria',
+                    method:'post',
+                    dataType: 'json',
+                    data: 'convocatoriaID='+$(this).data('convocatoria'),
+                    beforeSend:function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        $(".loader").fadeOut("slow");
+                        if(data.status == true){
+                            swal({
+                                title: "Se registro correctamente la postulación!",
+                                text: "Verificar su correo electronico para ver los anexos y los datos adicionales!",
+                                icon: "success",
+                            });
+                            setInterval(() => {
+                                location.reload();
+                            }, 4000);
+                        }else{
+                            swal({
+                                title: "Ocurrio un error volver a intentarlo!",
+                                icon: "error",
+                            });
+                        }
+                    }
+                })
+            });
+
+
+
+            $('.abrirModal').on('click',function(){
+                // console.log(user);
+                // return false;
+                if(user != ""){
+                    swal({
+                        title: "",
+                        text: "Esta seguro que desea postular a la convocatoria",
+                        icon: "warning",
+                        buttons: true,
+                        dangerMode: true,
+                    })
+                    .then((willDelete) => {
+                        if (willDelete) {
+                            $.ajaxSetup({
+                                headers: {
+                                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                                }
+                            });
+                            // console.log($(this).serialize());
+                            $.ajax({
+                                url: 'https://8uit.otass.gob.pe/portal/crear-convocatoria',
+                                method:'post',
+                                dataType: 'json',
+                                data: 'convocatoriaID='+$(this).data('convocatoria'),
+                                beforeSend:function(){
+                                    $(".loader").fadeIn("slow");
+                                },
+                                success: function(data){
+                                    $(".loader").fadeOut("slow");
+                                    if(data.status == true){
+                                        swal({
+                                            title: "Se registro correctamente la postulación!",
+                                            text: "Verificar su correo electronico para ver los anexos y los datos adicionales!",
+                                            icon: "success",
+                                        });
+                                        setInterval(() => {
+                                            location.reload();
+                                        }, 4000);
+                                    }else{
+                                        swal({
+                                            title: "Ocurrio un error volver a intentarlo!",
+                                            icon: "error",
+                                        });
+                                    }
+                                }
+                            })
+                        }
+                    });
+
+                    return false;
+
+
+                }else{
+                    convocatoriaSelect = '&convocatoriaID='+$(this).data('convocatoria');
+                    $('#task-add-modal').modal('show');
+                }
+            });
+
+            $('#login-btn').on('click',function(){
+                $('#login-modal').modal('show');
+            });
+            $('#register-btn').on('click',function(){
+                $('#register-modal').modal('show');
+            });
+
+            $(document).on('submit','#frmLogin',function(e){
+                e.preventDefault();
+                $.ajaxSetup({
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                    }
+                });
+                let action = $(this).attr('action');
+                let serial = $(this).serialize();
+                // console.log($(this).serialize());
+                $.ajax({
+                    url: action,
+                    method:'post',
+                    dataType: 'json',
+                    data: serial,
+                    beforeSend:function(){
+                        $(".loader").fadeIn("slow");
+                    },
+                    success: function(data){
+                        $(".loader").fadeOut("slow");
+                        console.log(data);
+                        if(data.status == false){
+                            swal("Error en credenciales", "Los datos de sesión no fueron encontrados.", "error")
+                        }else{
+                            location.reload();
+                        }
+                    }
+                });
+            });
+        });
+    </script>
+
+
+    <script type="text/javascript">
+        $('#ruc1').keyup(function(e){
+            e.preventDefault();
+            let ruc = $(this).val();
+            let cod = $(this).attr('data-id');
+            let cod2 = $(this).attr('data-id2');
+            console.log(ruc);
+            if(ruc.length == 11){
+                $.ajax({
+                    url: local.base+'/api/getListaEntidad',
+                    method:'POST',
+                    dataType: 'json',
+                    data: {ruc:ruc},
+                    beforeSend:function(){
+                        // $('.loading').show();
+                    },
+                    success: function(data){
+                        // console.log(data);
+                        // console.log(data.ddp_nombre);
+                        let razon = data.getDatosPrincipalesReturn.ddp_nombre;
+                        if(razon != null){
+                            // $('#razon_social').val(razon.trim());
+                            $('#razon_social'+cod).val(razon.trim());
+                            console.log(razon.trim());
+                            $('#razon_social20').val(razon.trim());
+                        }else{
+                            $('#msg').html('<div class="alert alert-danger">No existe RUC</div>');
+                        };
+                        $('.loading').hide();
+                    }
+                });
+            }
+        });
+
+        $('#ruc2').keyup(function(e){
+            e.preventDefault();
+            let ruc = $(this).val();
+            let cod = $(this).attr('data-id');
+            let cod2 = $(this).attr('data-id2');
+            console.log(ruc);
+            if(ruc.length == 11){
+                $.ajax({
+                    url: local.base+'/api/getListaEntidad',
+                    method:'POST',
+                    dataType: 'json',
+                    data: {ruc:ruc},
+                    beforeSend:function(){
+                        // $('.loading').show();
+                    },
+                    success: function(data){
+                        // console.log(data);
+                        // console.log(data.ddp_nombre);
+                        let razon = data.getDatosPrincipalesReturn.ddp_nombre;
+                        if(razon != null){
+                            // $('#razon_social').val(razon.trim());
+                            $('#razon_social2').val(razon.trim());
+
+                            $('#razon_social3').val(razon.trim());
+                        }else{
+                            $('#msg').html('<div class="alert alert-danger">No existe RUC</div>');
+                        };
+                        $('.loading').hide();
+                    }
+                });
+            }
+        });
+    </script>
+    <script src="https://8uit.otass.gob.pe/js/select2.min.js"></script>
+    <script>
+        $('.js-single').select2();
+    </script>
+</body>
+
+</html>

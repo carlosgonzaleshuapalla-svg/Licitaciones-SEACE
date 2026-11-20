@@ -10,6 +10,9 @@ const sunarp: Entidad = {
   nombre: "SUNARP",
   nombreCompleto: "Superintendencia Nacional de los Registros Públicos",
   portal: "https://8uit.sunarp.gob.pe/portal",
+  soloEnlace: false,
+  motivo: null,
+  nota: null,
   vigentes: 36,
   actualizadoEn: new Date().toISOString(),
   error: null,
@@ -74,7 +77,7 @@ describe("VistaEntidad", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   const respuesta = (extra: Partial<RequerimientosResponse> = {}): RequerimientosResponse => ({
-    entidad: { id: "sunarp", nombre: "SUNARP", nombreCompleto: sunarp.nombreCompleto, portal: sunarp.portal },
+    entidad: { id: "sunarp", nombre: "SUNARP", nombreCompleto: sunarp.nombreCompleto, portal: sunarp.portal, soloEnlace: false, motivo: null, nota: null },
     actualizadoEn: new Date().toISOString(),
     error: null,
     zonas: ["SEDE CENTRAL", "ZONA N° IX"],
@@ -124,5 +127,33 @@ describe("VistaEntidad", () => {
     vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 500 }) as Response));
     render(<VistaEntidad entidad={sunarp} />);
     expect(await screen.findByRole("alert")).toHaveTextContent(/No se pudo cargar la lista/);
+  });
+
+  it("un portal de acceso directo no consulta al servidor: explica el motivo y lleva al portal", async () => {
+    const f = vi.fn();
+    vi.stubGlobal("fetch", f);
+    const pj: Entidad = { ...sunarp, id: "poder-judicial", nombre: "Poder Judicial", nombreCompleto: "Poder Judicial", portal: "https://sap.pj.gob.pe/x", soloEnlace: true, motivo: "Su buscador exige un captcha.", vigentes: 0 };
+    render(<VistaEntidad entidad={pj} />);
+    expect(screen.getByTestId("vista-enlace")).toHaveTextContent("Su buscador exige un captcha.");
+    const enlace = screen.getByRole("link", { name: /Abrir el portal de Poder Judicial/ });
+    expect(enlace).toHaveAttribute("href", "https://sap.pj.gob.pe/x");
+    expect(enlace).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it("muestra el aviso propio de la entidad (p. ej. contrataciones mayores a 8 UIT)", async () => {
+    simular(respuesta());
+    render(<VistaEntidad entidad={{ ...sunarp, nota: "Ojo: contrataciones MAYORES a 8 UIT." }} />);
+    expect(await screen.findByText(/Ojo: contrataciones MAYORES a 8 UIT\./)).toBeInTheDocument();
+  });
+});
+
+describe("SelectorFuente con acceso directo", () => {
+  it("marca con ↗ (no con un contador) a los portales que solo se enlazan", () => {
+    const pj: Entidad = { ...sunarp, id: "poder-judicial", nombre: "Poder Judicial", soloEnlace: true, vigentes: 0 };
+    render(<SelectorFuente fuente={FUENTE_SEACE} entidades={[sunarp, pj]} onElegir={() => {}} />);
+    expect(screen.getByLabelText("acceso directo al portal")).toBeInTheDocument();
+    expect(screen.getByLabelText("36 vigentes")).toBeInTheDocument();
+    expect(screen.queryByLabelText("0 vigentes")).not.toBeInTheDocument();
   });
 });

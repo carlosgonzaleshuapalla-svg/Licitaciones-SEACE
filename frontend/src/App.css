@@ -977,3 +977,28 @@
     white-space: nowrap;
   }
 }
+
+/* --- Portales de acceso directo (no se pueden leer desde aquí) --- */
+
+.fuente-contador-enlace {
+  background: transparent;
+  border: 1px dashed currentColor;
+  padding: 0 6px;
+}
+
+.fuente-btn-activa .fuente-contador-enlace {
+  background: transparent;
+}
+
+.enlace-directo {
+  text-align: left;
+}
+
+.enlace-directo .req-postular {
+  margin-left: 0;
+}
+
+.enlace-directo-pie {
+  font-size: 13px;
+  opacity: 0.8;
+}

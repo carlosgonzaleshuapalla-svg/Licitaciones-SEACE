@@ -11,7 +11,8 @@ interface SelectorFuenteProps {
 /**
  * Barra para cambiar de dónde se ven las compras: SEACE (el buscador público de
  * contrataciones) o el portal propio de otra entidad del Estado (SUNARP, SBN…),
- * que publican sus compras de hasta 8 UIT por su cuenta.
+ * que publican sus compras de hasta 8 UIT por su cuenta. Las que no se pueden
+ * leer desde aquí (captcha) llevan "↗": son acceso directo a su portal.
  */
 export function SelectorFuente({ fuente, entidades, onElegir }: SelectorFuenteProps) {
   // Con una sola fuente no hay nada que elegir.
@@ -38,9 +39,15 @@ export function SelectorFuente({ fuente, entidades, onElegir }: SelectorFuentePr
           title={e.nombreCompleto}
         >
           {e.nombre}
-          <span className="fuente-contador" aria-label={`${e.vigentes} vigentes`}>
-            {e.vigentes}
-          </span>
+          {e.soloEnlace ? (
+            <span className="fuente-contador fuente-contador-enlace" aria-label="acceso directo al portal">
+              ↗
+            </span>
+          ) : (
+            <span className="fuente-contador" aria-label={`${e.vigentes} vigentes`}>
+              {e.vigentes}
+            </span>
+          )}
         </button>
       ))}
     </nav>

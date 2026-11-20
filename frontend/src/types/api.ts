@@ -132,6 +132,12 @@ export interface Entidad {
   nombre: string;
   nombreCompleto: string;
   portal: string;
+  // Portal que no se puede leer desde aquí (captcha, etc.): solo se ofrece el acceso directo.
+  soloEnlace: boolean;
+  // Por qué es solo enlace (null si se lee normalmente).
+  motivo: string | null;
+  // Aviso propio de la entidad (p. ej. "contrataciones mayores a 8 UIT").
+  nota: string | null;
   // Requerimientos con el plazo todavía abierto.
   vigentes: number;
   // Cuándo se leyó por última vez el portal de la entidad (ISO), o null si nunca.
@@ -160,7 +166,7 @@ export interface Requerimiento {
 }
 
 export interface RequerimientosResponse {
-  entidad: Pick<Entidad, "id" | "nombre" | "nombreCompleto" | "portal">;
+  entidad: Pick<Entidad, "id" | "nombre" | "nombreCompleto" | "portal" | "soloEnlace" | "motivo" | "nota">;
   actualizadoEn: string | null;
   error: string | null;
   zonas: string[];

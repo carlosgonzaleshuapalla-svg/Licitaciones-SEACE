@@ -210,3 +210,105 @@ export function totalMinsa(html) {
   const m = /Mostrando[\s\S]{0,40}?de\s*(\d+)/i.exec(limpiar(html).replace(/<[^>]+>/g, ' '));
   return m ? Number(m[1]) : null;
 }
+
+/**
+ * Tipo según cómo empieza el título ("ADQUISICIÓN DE…" → Bien, "SERVICIO DE…" →
+ * Servicio). Solo con prefijos claros; si no, null (no se adivina).
+ */
+export function inferirTipo(titulo) {
+  const t = String(titulo ?? '').trim().toLowerCase();
+  if (/^(adquisici[oó]n|compra|suministro de)\b/.test(t)) return 'Bien';
+  if (/^(servicio|contrataci[oó]n del? servicio|alquiler|mantenimiento)\b/.test(t)) return 'Servicio';
+  return null;
+}
+
+/** "/Date(1795135740000)/" (JSON de ASP.NET, milisegundos UTC) → ISO UTC, o null. */
+export function fechaAspNet(valor) {
+  const m = /^\/Date\((-?\d+)(?:[+-]\d{4})?\)\/$/.exec(String(valor ?? ''));
+  if (!m) return null;
+  const d = new Date(Number(m[1]));
+  return Number.isNaN(d.getTime()) || d.getUTCFullYear() < 2000 ? null : d.toISOString();
+}
+
+/** Más tardía de varias fechas ISO (ignora los null). */
+function masTardia(fechas) {
+  const validas = fechas.filter(Boolean);
+  return validas.length ? validas.reduce((a, b) => (Date.parse(b) > Date.parse(a) ? b : a)) : null;
+}
+
+/**
+ * Programa Nacional de Saneamiento Rural (Vivienda): respuesta JSON de
+ * `Consulta/jsonListadoProcesos`. Cada proceso puede tener ampliaciones del plazo
+ * ("dd/mm/aaaa hh:mm&motivo|…"): vale la fecha más tardía.
+ */
+export function parsearListaPnsr(json, { api }) {
+  const filas = Array.isArray(json?.data) ? json.data : [];
+  const salida = [];
+  for (const f of filas) {
+    if (f?.PSEestado_tipo !== 1) continue; // 1 = Vigente
+    const titulo = arreglarTitulo(limpiar(f.PSEdescripcion));
+    const ampliaciones = String(f.PSEampliacion ?? '')
+      .split('|')
+      .map((x) => parsearFechaPortal(x.split('&')[0]));
+    const vence = masTardia([fechaAspNet(f.PSEfecha_vencimiento), ...ampliaciones]);
+    const id = f.PSEid != null ? String(f.PSEid) : null;
+    if (!titulo || !vence || !id) continue;
+    const archivo = (ruta) => {
+      // "E:\Repositorio\Seguimiento\TDR_ET\x.pdf" → "Repositorio\Seguimiento\TDR_ET\x.pdf"
+      const rel = String(ruta ?? '').split('\\').slice(1).join('\\');
+      return rel ? `${api}Consulta/DescargarArchivo?druta=${encodeURIComponent(rel)}` : null;
+    };
+    const documentos = [
+      ['Términos de referencia', archivo(f.PSEtdr)],
+      ['Anexos', archivo(f.PSEanexo)],
+    ]
+      .filter(([, url]) => url)
+      .map(([nombre, url]) => ({ nombre, url }));
+    salida.push({
+      id,
+      tipo: inferirTipo(titulo),
+      titulo,
+      descripcion: f.PSEexpediente ? `Expediente ${limpiar(f.PSEexpediente)}` : null,
+      zona: limpiar(f.PSEdepartamento_nombre) || null,
+      publicado: fechaAspNet(f.PSEfecha_publicacion),
+      vence,
+      documentos,
+      enlace: null,
+    });
+  }
+  return salida;
+}
+
+/**
+ * Jurado Nacional de Elecciones (PLACOBS): respuesta de `api/search`. Cada proceso
+ * está en una etapa (consultas u ofertas) con su propia fecha de fin; se toma la
+ * de la etapa en curso. Los TDR se bajan con un POST propio del portal, así que
+ * no se enlazan: el botón lleva al portal.
+ */
+export function parsearListaJne(json) {
+  const filas = Array.isArray(json?.data) ? json.data : [];
+  const salida = [];
+  for (const f of filas) {
+    if (f?.estado !== 'Vigente') continue;
+    const titulo = arreglarTitulo(limpiar(f.descripcion));
+    const fin = f.fechaConsultaFin ? String(f.fechaConsultaFin).trim() : '';
+    // Viene sin zona horaria ("2026-11-20T23:59:59"): es hora de Perú.
+    const vence = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(fin) ? `${fin}${ZONA_HORARIA}` : null;
+    const id = f.numeroExpediente ? String(f.numeroExpediente) : null;
+    if (!titulo || !vence || !id) continue;
+    const etapa = f.isPostular2 || f.isPostular ? 'Presentación de ofertas' : f.isConsultar2 || f.isConsultar ? 'Consultas' : 'Etapa en curso';
+    const pub = f.fechaPublicacion ? `${String(f.fechaPublicacion).slice(0, 19)}${ZONA_HORARIA}` : null;
+    salida.push({
+      id,
+      tipo: inferirTipo(titulo),
+      titulo,
+      descripcion: `Expediente ${id} · etapa actual: ${etapa}`,
+      zona: null,
+      publicado: pub && !Number.isNaN(Date.parse(pub)) ? pub : null,
+      vence,
+      documentos: [],
+      enlace: null,
+    });
+  }
+  return salida;
+}

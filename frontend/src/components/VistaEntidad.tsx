@@ -48,8 +48,44 @@ export function TarjetaRequerimiento({ r, portal, ahora }: { r: Requerimiento; p
   );
 }
 
-/** Compras menores o iguales a 8 UIT de una entidad que publica en su propio portal. */
+/** Portal que no se puede leer desde aquí: se explica por qué y se lleva al portal. */
+function VistaEnlace({ entidad }: { entidad: Entidad }) {
+  return (
+    <>
+      <header className="app-header">
+        <div>
+          <h1>{entidad.nombre}</h1>
+          <p className="app-subtitulo">{entidad.nombreCompleto}</p>
+        </div>
+      </header>
+      <main className="app-main-entidad">
+        <section className="panel-lista">
+          <div className="estado-mensaje enlace-directo" data-testid="vista-enlace">
+            <strong>Este portal se consulta directamente en su página.</strong>
+            {entidad.motivo && <p>{entidad.motivo}</p>}
+            {entidad.nota && <p>{entidad.nota}</p>}
+            <p>
+              <a href={entidad.portal} target="_blank" rel="noopener noreferrer" className="req-postular">
+                Abrir el portal de {entidad.nombre} <span aria-hidden="true">↗</span>
+              </a>
+            </p>
+            <p className="enlace-directo-pie">
+              Para cotizar normalmente se necesita RNP vigente y registrarse (gratis) en ese portal; cada entidad define
+              sus reglas.
+            </p>
+          </div>
+        </section>
+      </main>
+    </>
+  );
+}
+
+/** Compras de una entidad que publica en su propio portal (se lee, o se enlaza si no se puede leer). */
 export function VistaEntidad({ entidad }: { entidad: Entidad }) {
+  return entidad.soloEnlace ? <VistaEnlace entidad={entidad} /> : <VistaLista entidad={entidad} />;
+}
+
+function VistaLista({ entidad }: { entidad: Entidad }) {
   const [q, setQ] = useState("");
   const [qDebounced, setQDebounced] = useState("");
   const [tipo, setTipo] = useState<ObjetoContrato | "">("");
@@ -104,7 +140,7 @@ export function VistaEntidad({ entidad }: { entidad: Entidad }) {
         <div>
           <h1>{entidad.nombre}</h1>
           <p className="app-subtitulo">
-            {entidad.nombreCompleto} · compras menores o iguales a 8 UIT, publicadas en su propio portal
+            {entidad.nombreCompleto} · {entidad.nota ? "compras publicadas en su propio portal" : "compras menores o iguales a 8 UIT, publicadas en su propio portal"}
           </p>
         </div>
         <div className="sync-button-wrap">
@@ -117,6 +153,11 @@ export function VistaEntidad({ entidad }: { entidad: Entidad }) {
 
       <main className="app-main-entidad">
         <section className="panel-lista">
+          {entidad.nota && (
+            <div className="estado-mensaje estado-aviso" role="note">
+              {entidad.nota}
+            </div>
+          )}
           {res?.error && (
             <div className="estado-mensaje estado-aviso" role="status">
               No se pudo leer el portal de {entidad.nombre} en la última revisión; se muestra lo que había

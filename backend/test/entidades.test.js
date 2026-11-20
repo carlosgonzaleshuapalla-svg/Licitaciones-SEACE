@@ -14,9 +14,13 @@ import {
   totalMinsa,
   arreglarTitulo,
   normalizarEnlace,
+  parsearListaPnsr,
+  parsearListaJne,
+  inferirTipo,
+  fechaAspNet,
 } from '../src/entidades/parsers.js';
 import { recolectarTodas, recolectarEntidad, comprimirEntidades } from '../src/entidades/recolector.js';
-import { ENTIDADES, entidadPorId } from '../src/entidades/catalogo.js';
+import { ENTIDADES, entidadPorId, esSoloEnlace } from '../src/entidades/catalogo.js';
 import {
   leerArchivoEntidades,
   validarEntidades,
@@ -124,18 +128,128 @@ function descargadorDePrueba() {
     'https://8uit.sbn.gob.pe/portal': leer('sbn.html'),
     'https://requerimiento8uit.sanipes.gob.pe/portal': leer('sanipes.html'),
     'https://8uit.hospitaldeventanilla.gob.pe/8uits/public/portal': leer('ventanilla.html'),
+    'https://8uit.otass.gob.pe/portal': leer('otass.html'),
   };
   const minsa = leer('minsa-p1.html');
   const pedidos = [];
-  const descargar = async (url) => {
+  const cuerpos = [];
+  const descargar = async (url, opciones) => {
     pedidos.push(url);
+    if (url.includes('Consulta/jsonListadoProcesos')) {
+      cuerpos.push(opciones?.post);
+      return leer('pnsr.json');
+    }
+    if (url.endsWith('contratacionesbs/api/search')) {
+      cuerpos.push(opciones?.post);
+      return leer('jne.json');
+    }
     if (url.startsWith('https://8uit.minsa.gob.pe/portal?type=')) return url.endsWith('page=1') && url.includes('type=B') ? minsa : '<html></html>';
     if (url in paginas) return paginas[url];
     if (url.includes('/zona-registral/')) return '<html></html>'; // zonas que no tenemos guardadas
     throw new Error('HTTP 404');
   };
-  return { descargar, pedidos };
+  return { descargar, pedidos, cuerpos };
 }
+
+describe('lectores de Vivienda (PNSR), JNE y OTASS', () => {
+  test('OTASS se lee con el lector clásico', () => {
+    const r = parsearListaClasica(leer('otass.html'), { base: 'https://8uit.otass.gob.pe/portal' });
+    assert.equal(r.length, 4);
+    assert.equal(r[0].vence, '2026-11-20T15:30:00-05:00');
+    assert.ok(r.every((x) => x.titulo && x.documentos.every((d) => d.url.startsWith('https://8uit.otass.gob.pe/'))));
+  });
+
+  test('inferirTipo solo adivina con prefijos claros', () => {
+    assert.equal(inferirTipo('ADQUISICIÓN DE MATERIALES'), 'Bien');
+    assert.equal(inferirTipo('SERVICIO DE IMPERMEABILIZACIÓN'), 'Servicio');
+    assert.equal(inferirTipo('Contratación de suministro e instalación'), null);
+    assert.equal(inferirTipo(''), null);
+  });
+
+  test('fechaAspNet convierte milisegundos UTC y rechaza lo raro', () => {
+    assert.equal(fechaAspNet('/Date(1795135740000)/'), '2026-11-20T00:49:00.000Z');
+    assert.equal(fechaAspNet('/Date(-62135578800000)/'), null, 'la fecha vacía de .NET (año 1) no vale');
+    assert.equal(fechaAspNet('2026-11-20'), null);
+    assert.equal(fechaAspNet(null), null);
+  });
+
+  const API = 'https://aplicacionespnsr.vivienda.gob.pe/spsPNSR/';
+
+  test('PNSR: lee los vigentes con sede, plazo y TDR descargable', () => {
+    const r = parsearListaPnsr(JSON.parse(leer('pnsr.json')), { api: API });
+    assert.equal(r.length, 14);
+    const a = r[0];
+    assert.equal(a.zona, 'Sede Central');
+    assert.equal(a.vence, '2026-11-24T22:00:00.000Z');
+    assert.match(a.documentos[0].url, /^https:\/\/aplicacionespnsr\.vivienda\.gob\.pe\/spsPNSR\/Consulta\/DescargarArchivo\?druta=Repositorio%5CSeguimiento%5CTDR_ET%5C/);
+    assert.ok(!a.documentos[0].url.includes('E%3A'), 'sin la letra de unidad del servidor');
+    assert.ok(r.every((x) => x.id && x.titulo && x.vence));
+  });
+
+  test('PNSR: una ampliación del plazo prevalece sobre la fecha original', () => {
+    const json = JSON.parse(leer('pnsr.json'));
+    const conAmpliacion = json.data.find((f) => f.PSEampliacion);
+    assert.ok(conAmpliacion, 'el ejemplo guardado trae una ampliación');
+    const r = parsearListaPnsr({ data: [conAmpliacion] }, { api: API });
+    assert.equal(r[0].vence, '2026-11-23T23:59:00-05:00');
+  });
+
+  test('PNSR: ignora lo que no está vigente o no tiene fecha', () => {
+    const base = JSON.parse(leer('pnsr.json')).data[0];
+    const filas = [
+      { ...base, PSEestado_tipo: 2 },
+      { ...base, PSEfecha_vencimiento: null, PSEampliacion: null },
+      { ...base, PSEdescripcion: '  ' },
+    ];
+    assert.deepEqual(parsearListaPnsr({ data: filas }, { api: API }), []);
+    assert.deepEqual(parsearListaPnsr(null, { api: API }), []);
+  });
+
+  test('JNE: toma la fecha de fin de la etapa en curso, en hora de Perú', () => {
+    const r = parsearListaJne(JSON.parse(leer('jne.json')));
+    assert.equal(r.length, 4);
+    const primero = r[0];
+    assert.equal(primero.id, 'I-000287-2026');
+    assert.equal(primero.vence, '2026-11-20T23:59:59-05:00');
+    assert.equal(primero.tipo, 'Bien');
+    assert.match(primero.descripcion, /Presentación de ofertas/);
+    assert.ok(!primero.titulo.includes('\n'));
+    assert.deepEqual(primero.documentos, []);
+  });
+
+  test('JNE: los concluidos y las respuestas raras se ignoran', () => {
+    assert.deepEqual(parsearListaJne({ data: [{ estado: 'Concluido', numeroExpediente: 'X', descripcion: 'A', fechaConsultaFin: '2026-11-20T10:00:00' }] }), []);
+    assert.deepEqual(parsearListaJne({ data: [{ estado: 'Vigente', numeroExpediente: 'X', descripcion: 'A', fechaConsultaFin: 'mañana' }] }), []);
+    assert.deepEqual(parsearListaJne('nada'), []);
+  });
+
+  test('el recolector pide PNSR (con search[value]) y JNE (año en curso) y no toca los de acceso directo', async () => {
+    const { descargar, pedidos, cuerpos } = descargadorDePrueba();
+    const ahora = new Date('2026-11-20T15:00:00Z');
+    const pnsr = await recolectarEntidad(entidadPorId('pnsr'), descargar, { ahora });
+    assert.equal(pnsr.length, 14);
+    assert.match(cuerpos[0], /search\[value\]=/);
+    const jne = await recolectarEntidad(entidadPorId('jne'), descargar, { ahora });
+    assert.equal(jne.length, 4);
+    assert.deepEqual(JSON.parse(cuerpos[1]), { idAnio: 2026, idEstado: 1, star: 1, end: 100 });
+    const todas = await recolectarTodas({ descargar, ahora });
+    const pedidosDeEnlace = pedidos.filter((u) => /sap\.pj\.gob\.pe|limacompra|cms\.pvn|midagri|senamhi/.test(u));
+    assert.deepEqual(pedidosDeEnlace, []);
+    assert.ok(!todas.entidades.some((e) => esSoloEnlace(entidadPorId(e.id))));
+  });
+
+  test('una respuesta que no es JSON deja el error y conserva lo anterior', async () => {
+    const { descargar } = descargadorDePrueba();
+    const ahora = new Date('2026-11-20T15:00:00Z');
+    const primera = await recolectarTodas({ descargar, ahora });
+    const bloqueo = async (url, op) => (url.endsWith('api/search') ? '<html>Request blocked</html>' : descargar(url, op));
+    const segunda = await recolectarTodas({ previo: primera, descargar: bloqueo, ahora: new Date('2026-11-20T18:00:00Z') });
+    const jne = segunda.entidades.find((e) => e.id === 'jne');
+    assert.ok(jne.error);
+    assert.equal(jne.requerimientos.length, 4);
+    assert.equal(jne.actualizadoEn, '2026-11-20T15:00:00.000Z');
+  });
+});
 
 describe('recolector', () => {
   test('SUNARP lee solo las zonas con requerimientos vigentes', async () => {
@@ -157,8 +271,9 @@ describe('recolector', () => {
   test('si una entidad falla se conserva lo anterior y se anota el error', async () => {
     const { descargar } = descargadorDePrueba();
     const primera = await recolectarTodas({ descargar, ahora: new Date('2026-11-18T10:00:00Z') });
-    assert.equal(primera.entidades.length, ENTIDADES.length);
+    assert.equal(primera.entidades.length, ENTIDADES.filter((e) => !esSoloEnlace(e)).length, 'los de acceso directo no se leen');
     assert.ok(primera.entidades.every((e) => e.error === null));
+    assert.ok(!primera.entidades.some((e) => e.id === 'poder-judicial'));
 
     const roto = async (url) => {
       if (url.includes('sbn')) throw new Error('fetch failed');
@@ -307,6 +422,19 @@ describe('API /api/entidades', () => {
     assert.equal(basura.status, 200);
     assert.equal((await basura.json()).pageSize, 100);
     assert.equal((await fetch(`${base}/api/entidades/nada/requerimientos`)).status, 404);
+  });
+
+  test('los portales de acceso directo se anuncian como tales, con su motivo y sin requerimientos', async () => {
+    const body = await (await fetch(`${base}/api/entidades`)).json();
+    const pj = body.entidades.find((e) => e.id === 'poder-judicial');
+    assert.equal(pj.soloEnlace, true);
+    assert.match(pj.motivo, /captcha/i);
+    assert.equal(pj.vigentes, 0);
+    assert.equal(body.entidades.find((e) => e.id === 'sbn').soloEnlace, false);
+    assert.match(body.entidades.find((e) => e.id === 'jne').nota, /MAYORES a 8 UIT/);
+    const r = await (await fetch(`${base}/api/entidades/poder-judicial/requerimientos`)).json();
+    assert.equal(r.entidad.soloEnlace, true);
+    assert.deepEqual([r.total, r.data.length], [0, 0]);
   });
 
   after(() => {

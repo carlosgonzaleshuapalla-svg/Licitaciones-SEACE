@@ -10,14 +10,23 @@
 import { execFile } from 'node:child_process';
 import zlib from 'node:zlib';
 import { promisify } from 'node:util';
-import { ENTIDADES } from './catalogo.js';
-import { parsearListaClasica, parsearZonaSunarp, parsearZonasSunarp, parsearListaMinsa, totalMinsa } from './parsers.js';
+import { ENTIDADES, esSoloEnlace } from './catalogo.js';
+import {
+  parsearListaClasica,
+  parsearZonaSunarp,
+  parsearZonasSunarp,
+  parsearListaMinsa,
+  totalMinsa,
+  parsearListaPnsr,
+  parsearListaJne,
+} from './parsers.js';
 
 export const ENTIDADES_VERSION = 1;
 
 const PAUSA_MS = 2000;
 const TIMEOUT_MS = 30_000;
 const MAX_PAGINAS_MINSA = 20;
+const MAX_PAGINAS_PNSR = 10;
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
 
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -30,26 +39,29 @@ const execFileP = promisify(execFile);
  * incompleta: curl la completa y valida igual, y Node la rechaza. La verificación
  * del certificado NO se desactiva.
  */
-async function curl(url) {
-  const { stdout } = await execFileP(
-    'curl',
-    ['-sS', '-L', '--fail', '--max-time', String(TIMEOUT_MS / 1000), '--max-filesize', String(5 * 1024 * 1024), '-A', USER_AGENT, '-H', 'Accept-Language: es-PE,es;q=0.9', url],
-    { maxBuffer: 8 * 1024 * 1024, encoding: 'utf8', timeout: TIMEOUT_MS + 5000 },
-  );
+async function curl(url, { post = null, json = false } = {}) {
+  const args = ['-sS', '-L', '--fail', '--max-time', String(TIMEOUT_MS / 1000), '--max-filesize', String(5 * 1024 * 1024), '-A', USER_AGENT, '-H', 'Accept-Language: es-PE,es;q=0.9'];
+  if (post !== null) {
+    if (json) args.push('-H', 'Content-Type: application/json');
+    args.push('-X', 'POST', '--data-raw', post);
+  }
+  args.push(url);
+  const { stdout } = await execFileP('curl', args, { maxBuffer: 8 * 1024 * 1024, encoding: 'utf8', timeout: TIMEOUT_MS + 5000 });
   return stdout;
 }
 
 /** Pide una página (con un reintento) respetando la pausa entre pedidos. */
 export function crearDescargador({ transporte = curl, pausaMs = PAUSA_MS } = {}) {
   let ultimo = 0;
-  return async function descargar(url) {
+  /** `opciones`: { post: 'cuerpo', json: true } para los portales que se consultan por POST. */
+  return async function descargar(url, opciones) {
     let error;
     for (let intento = 0; intento < 2; intento++) {
       const espera = ultimo + pausaMs - Date.now();
       if (espera > 0) await dormir(espera);
       ultimo = Date.now();
       try {
-        return await transporte(url);
+        return await transporte(url, opciones);
       } catch (err) {
         error = err;
       }
@@ -59,7 +71,7 @@ export function crearDescargador({ transporte = curl, pausaMs = PAUSA_MS } = {})
 }
 
 /** Requerimientos vigentes de una entidad, ya sin duplicados. */
-export async function recolectarEntidad(entidad, descargar) {
+export async function recolectarEntidad(entidad, descargar, { ahora = new Date() } = {}) {
   const base = entidad.portal;
   let lista = [];
   if (entidad.lector === 'clasico') {
@@ -78,6 +90,21 @@ export async function recolectarEntidad(entidad, descargar) {
         if (filas.length === 0 || total === null || lista.filter((r) => r.tipo === tipo).length >= total) break;
       }
     }
+  } else if (entidad.lector === 'pnsr') {
+    // DataTables del lado del servidor: exige el parámetro search[value]; se pide de a 20.
+    for (let inicio = 0, pagina = 0; pagina < MAX_PAGINAS_PNSR; inicio += 20, pagina++) {
+      const cuerpo = `draw=${pagina + 1}&start=${inicio}&length=20&search[value]=`;
+      const crudo = await descargar(`${entidad.api}Consulta/jsonListadoProcesos?dpto=&estado=1`, { post: cuerpo });
+      const json = JSON.parse(crudo);
+      const filas = Array.isArray(json?.data) ? json.data : [];
+      lista.push(...parsearListaPnsr(json, { api: entidad.api }));
+      if (filas.length < 20) break;
+    }
+  } else if (entidad.lector === 'jne') {
+    const cuerpo = JSON.stringify({ idAnio: ahora.getFullYear(), idEstado: 1, star: 1, end: 100 });
+    const json = JSON.parse(await descargar(`${entidad.api}api/search`, { post: cuerpo, json: true }));
+    if (json?.success !== true) throw new Error('respuesta no válida');
+    lista = parsearListaJne(json);
   } else {
     throw new Error(`lector desconocido: ${entidad.lector}`);
   }
@@ -96,10 +123,11 @@ export async function recolectarEntidad(entidad, descargar) {
  */
 export async function recolectarTodas({ previo = null, descargar = crearDescargador(), log = () => {}, ahora = new Date(), entidades = ENTIDADES } = {}) {
   const salida = [];
-  for (const entidad of entidades) {
+  // Los de acceso directo no se leen: no hay nada que pedirles.
+  for (const entidad of entidades.filter((e) => !esSoloEnlace(e))) {
     const anterior = previo?.entidades?.find((e) => e.id === entidad.id) ?? null;
     try {
-      const requerimientos = await recolectarEntidad(entidad, descargar);
+      const requerimientos = await recolectarEntidad(entidad, descargar, { ahora });
       log(`${entidad.nombre}: ${requerimientos.length} requerimiento(s) vigente(s).`);
       salida.push({ id: entidad.id, actualizadoEn: ahora.toISOString(), error: null, requerimientos });
     } catch (err) {

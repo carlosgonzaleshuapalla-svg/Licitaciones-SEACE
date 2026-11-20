@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
-import { ENTIDADES, entidadPorId } from './catalogo.js';
+import { ENTIDADES, entidadPorId, esSoloEnlace } from './catalogo.js';
 
 const URL_POR_DEFECTO = 'https://raw.githubusercontent.com/carlosgonzaleshuapalla-svg/Licitaciones-SEACE/data/entidades.json.gz';
 const REFRESCO_CADA_MS = 30 * 60 * 1000;
@@ -97,6 +97,9 @@ export function listarEntidades(ahora = new Date()) {
         nombre: e.nombre,
         nombreCompleto: e.nombreCompleto,
         portal: e.portal,
+        soloEnlace: esSoloEnlace(e),
+        motivo: e.motivo ?? null,
+        nota: e.nota ?? null,
         vigentes: d ? d.requerimientos.filter((r) => vigente(r, ahora)).length : 0,
         actualizadoEn: d?.actualizadoEn ?? null,
         error: d?.error ?? null,
@@ -140,7 +143,15 @@ export function listarRequerimientos(id, { q, tipo, zona, orden = 'cierre', page
   const total = filas.length;
   filas = filas.slice((pag - 1) * tam, pag * tam);
   return {
-    entidad: { id: entidad.id, nombre: entidad.nombre, nombreCompleto: entidad.nombreCompleto, portal: entidad.portal },
+    entidad: {
+      id: entidad.id,
+      nombre: entidad.nombre,
+      nombreCompleto: entidad.nombreCompleto,
+      portal: entidad.portal,
+      soloEnlace: esSoloEnlace(entidad),
+      motivo: entidad.motivo ?? null,
+      nota: entidad.nota ?? null,
+    },
     actualizadoEn: d?.actualizadoEn ?? null,
     error: d?.error ?? null,
     zonas,
